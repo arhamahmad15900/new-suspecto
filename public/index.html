@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Suspecto - Free multiplayer drawing, guessing, and social deduction games. Play Picto and Sketchio online with friends!">
+  <meta name="keywords" content="suspecto, picto, sketchio, multiplayer drawing, guessing game, social deduction, imposter game">
+  <meta property="og:title" content="Suspecto - Multiplayer Drawing &amp; Deduction Platform">
+  <meta property="og:description" content="Draw, guess, deceive, and uncover the Imposter. Play Picto &amp; Sketchio with friends!">
+  <meta property="og:type" content="website">
+  <title>Suspecto — Multiplayer Drawing &amp; Social Deduction</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════ -->
+<!--  HOME SCREEN                           -->
+<!-- ══════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <div class="logo-big">
+    <a href="/" id="home-logo-link" title="Suspecto Home">
+      <!-- ══ SUSPECTO ANIMATED LOGO — Skribbl-style colorful hand-drawn ══ -->
+      <svg viewBox="0 0 610 140" class="suspecto-animated-logo" id="main-logo" role="img" aria-label="Suspecto">
+        <defs>
+          <!-- Per-letter bright color highlights (light top sheen) -->
+          <linearGradient id="shineS" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#fff" stop-opacity="0.55" />
+            <stop offset="40%" stop-color="#fff" stop-opacity="0" />
+          </linearGradient>
+          <linearGradient id="shineU" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#fff" stop-opacity="0.45" />
+            <stop offset="40%" stop-color="#fff" stop-opacity="0" />
+          </linearGradient>
+          <!-- Magnifying glass lens gradient -->
+          <radialGradient id="lensGlow" cx="35%" cy="30%" r="65%">
+            <stop offset="0%" stop-color="#fffde7" />
+            <stop offset="55%" stop-color="#FFD54F" />
+            <stop offset="100%" stop-color="#FF8F00" />
+          </radialGradient>
+          <!-- Handle gradient -->
+          <linearGradient id="handleCol" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#A1623A" />
+            <stop offset="100%" stop-color="#6D3B1F" />
+          </linearGradient>
+          <!-- Drop shadow for whole logo group -->
+          <filter id="logoDropShadow" x="-8%" y="-8%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#071a14" flood-opacity="0.45" />
+          </filter>
+        </defs>
+
+        <!-- ── All letters + accent, wrapped in shadow filter ── -->
+        <g filter="url(#logoDropShadow)">
+
+          <!-- ══ LETTER 1 — S — Red ══ -->
+          <g class="l-1">
+            <!-- small hand-drawn wobble via slight rotation baked in -->
+            <text x="18" y="100" class="logo-letter lc-S"
+                  transform="rotate(-2.5, 52, 100)">S</text>
+            <!-- Specular shine arc -->
+            <path d="M30,44 C38,38 54,37 64,42"
+                  stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.7"/>
+          </g>
+
+          <!-- ══ LETTER 2 — u — Orange ══ -->
+          <g class="l-2">
+            <text x="82" y="100" class="logo-letter lc-U"
+                  transform="rotate(1.8, 112, 100)">u</text>
+            <path d="M92,56 C94,66 96,77 100,83"
+                  stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.65"/>
+          </g>
+
+          <!-- ══ LETTER 3 — s — Yellow ══ -->
+          <g class="l-3">
+            <text x="143" y="100" class="logo-letter lc-S2"
+                  transform="rotate(-1.2, 167, 100)">s</text>
+            <path d="M150,53 C158,47 170,48 178,53"
+                  stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.65"/>
+          </g>
+
+          <!-- ══ LETTER 4 — p — Lime Green ══ -->
+          <g class="l-4">
+            <text x="196" y="100" class="logo-letter lc-P"
+                  transform="rotate(2.1, 230, 100)">p</text>
+            <path d="M212,49 C220,44 232,45 240,51"
+                  stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.65"/>
+          </g>
+
+          <!-- ══ LETTER 5 — e — Cyan ══ -->
+          <g class="l-5">
+            <text x="260" y="100" class="logo-letter lc-E"
+                  transform="rotate(-1.8, 292, 100)">e</text>
+            <path d="M268,49 C278,44 290,46 296,52"
+                  stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.65"/>
+          </g>
+
+          <!-- ══ LETTER 6 — c — Cobalt Blue ══ -->
+          <g class="l-6">
+            <text x="318" y="100" class="logo-letter lc-C"
+                  transform="rotate(2.4, 348, 100)">c</text>
+            <path d="M326,49 C336,44 348,46 354,52"
+                  stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.65"/>
+          </g>
+
+          <!-- ══ LETTER 7 — t — Violet ══ -->
+          <g class="l-7">
+            <text x="368" y="100" class="logo-letter lc-T"
+                  transform="rotate(-2.0, 388, 100)">t</text>
+            <!-- Crossbar shine -->
+            <path d="M358,58 C364,54 378,54 386,58"
+                  stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.55"/>
+          </g>
+
+          <!-- ══ LETTER 8 — o — Hot Pink ══ -->
+          <g class="l-8">
+            <text x="414" y="100" class="logo-letter lc-O"
+                  transform="rotate(1.6, 450, 100)">o</text>
+            <path d="M424,49 C434,43 450,44 458,51"
+                  stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none" opacity="0.65"/>
+          </g>
+
+          <!-- ══ ACCENT — Magnifying Glass (detective brand mark) ══ -->
+          <g class="logo-glass-group">
+            <!-- Rotated & positioned at top-right of the word -->
+            <!-- Handle body -->
+            <line x1="555" y1="105" x2="580" y2="128"
+                  stroke="#5C3317" stroke-width="13" stroke-linecap="round"/>
+            <!-- Handle band -->
+            <line x1="555" y1="105" x2="561" y2="111"
+                  stroke="#C8860A" stroke-width="8" stroke-linecap="round"/>
+            <!-- Rim outer -->
+            <circle cx="532" cy="78" r="32"
+                    fill="none" stroke="#111" stroke-width="10"/>
+            <!-- Rim fill (colored) -->
+            <circle cx="532" cy="78" r="27"
+                    fill="#1565C0" stroke="none"/>
+            <!-- Lens -->
+            <circle cx="532" cy="78" r="22"
+                    fill="url(#lensGlow)" stroke="#111" stroke-width="3"/>
+            <!-- Lens shine arc -->
+            <path d="M520,67 A14,14 0 0,1 540,64"
+                  stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.85"/>
+            <circle cx="543" cy="72" r="3" fill="#fff" opacity="0.7"/>
+            <!-- Sparkle star -->
+            <g class="sparkle" transform="translate(548, 56) scale(0.9)">
+              <path d="M0,-9 L2.5,-2.5 L9,0 L2.5,2.5 L0,9 L-2.5,2.5 L-9,0 L-2.5,-2.5 Z"
+                    fill="#fff"/>
+            </g>
+          </g>
+
+        </g><!-- /shadow group -->
+      </svg>
+    </a>
+    <div class="dev-credit">Developed by Arham Ahmad Khan</div>
+  </div>
+
+  <!-- Hero Introduction -->
+  <div class="hero-intro">
+    <p class="hero-tagline">Draw, guess, deceive, and uncover the Imposter. Jump into multiplayer games with friends or create your own room and play together.</p>
+    <div class="feature-pills">
+      <span class="pill">👥 2–12 Players</span>
+      <span class="pill">⚡ Real-time Multiplayer</span>
+      <span class="pill">🎤 Built-in Voice Chat</span>
+      <span class="pill">✨ Free in Browser</span>
+    </div>
+  </div>
+
+  <div class="panels">
+    <div class="panel main-panel">
+      <h2 class="panel-title">Choose Your Game</h2>
+
+      <!-- Picto Card -->
+      <div class="game-card" id="game-card-picto">
+        <div class="game-card-img-wrap">
+          <img src="/img/picto_icon.jpg" alt="Picto" class="game-card-img">
+        </div>
+        <div class="game-card-body">
+          <div class="game-badge-row">
+            <h3 class="game-card-title">Picto</h3>
+            <span class="game-tag tag-deduction">🕵️ Social Deduction</span>
+          </div>
+          <p class="game-card-desc">A multiplayer drawing and social deduction game where players work together to uncover the Imposter.</p>
+          <button class="btn btn-green btn-play" id="btn-play-picto">Play Picto</button>
+        </div>
+      </div>
+
+      <!-- Sketchio Card -->
+      <div class="game-card" id="game-card-sketchio">
+        <div class="game-card-img-wrap">
+          <img src="/img/sketchio_icon.jpg" alt="Sketchio" class="game-card-img">
+        </div>
+        <div class="game-card-body">
+          <div class="game-badge-row">
+            <h3 class="game-card-title">Sketchio</h3>
+            <span class="game-tag tag-drawing">✏️ Drawing &amp; Guessing</span>
+          </div>
+          <p class="game-card-desc">A fast-paced drawing and guessing game where players compete to identify words and earn points.</p>
+          <button class="btn btn-green btn-play" id="btn-play-sketchio">Play Sketchio</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meaningful Content: How to Play Section -->
+  <div class="content-container">
+    <section class="how-to-play-section">
+      <h2 class="section-title">How to Play Suspecto</h2>
+      <p class="section-subtitle">Get started in seconds with friends or family &mdash; no downloads or accounts required.</p>
+      
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <div class="step-icon">🎮</div>
+          <h3 class="step-title">Choose a Game</h3>
+          <p class="step-desc">Pick <strong>Picto</strong> for social deduction and mystery, or <strong>Sketchio</strong> for fast-paced word drawing &amp; guessing.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <div class="step-icon">🏠</div>
+          <h3 class="step-title">Create or Join a Room</h3>
+          <p class="step-desc">Start a private room with your preferred draw times and player limits, or enter an existing 6-character room code.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <div class="step-icon">🔗</div>
+          <h3 class="step-title">Invite Your Friends</h3>
+          <p class="step-desc">Share your instant invite link with one click. Jump into the built-in crystal-clear voice chat right inside your lobby.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">4</div>
+          <div class="step-icon">🏆</div>
+          <h3 class="step-title">Draw, Guess &amp; Win</h3>
+          <p class="step-desc">Sketch clues, deduce who the Imposter is, type your guesses in real-time, and top the leaderboard!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Meaningful Content: About Section -->
+    <section class="about-section">
+      <div class="about-card">
+        <div class="about-header">
+          <span class="about-icon">🔍</span>
+          <h2 class="about-title">About Suspecto</h2>
+        </div>
+        <p class="about-text">
+          <strong>Suspecto</strong> is a modern browser-based gaming platform centered on creative drawing, keen deduction, and lively multiplayer competition. Whether you are working together to identify the sneaky Imposter in <em>Picto</em>, or racing against the clock to guess hilarious sketches in <em>Sketchio</em>, Suspecto provides smooth real-time canvas synchronization, live text chat, and peer-to-peer voice chat directly in your browser.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <!-- Footer -->
+  <div class="bottom-wrap">
+    <svg viewBox="0 0 1000 60" preserveAspectRatio="none" class="footer-curve">
+      <path d="M0,0 Q500,60 1000,0 L1000,60 L0,60 Z"></path>
+    </svg>
+    <footer class="footer">
+      <div class="footer-sections">
+        <div class="footer-section">
+          <div class="footer-brand">
+            <span class="footer-icon">🔍</span>
+            <h4>Suspecto Platform</h4>
+          </div>
+          <p>A multiplayer drawing and social deduction gaming hub. Play with friends anywhere, anytime, across desktop, tablet, and mobile.</p>
+          <p style="margin-top:10px; color:#B8F2E6;">Free, private rooms &bull; No downloads &bull; Real-time voice</p>
+        </div>
+
+        <div class="footer-section">
+          <div class="footer-brand">
+            <span class="footer-icon">🎮</span>
+            <h4>Games &amp; Modes</h4>
+          </div>
+          <ul class="footer-links">
+            <li><strong>Picto</strong> &mdash; Turn-based drawing, secret words &amp; voting</li>
+            <li><strong>Sketchio</strong> &mdash; Fast drawing, letter hints &amp; leaderboard</li>
+            <li><strong>Voice Chat</strong> &mdash; Integrated WebRTC audio for groups</li>
+            <li><strong>Custom Words</strong> &mdash; Support for custom word lists</li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <div class="footer-brand">
+            <span class="footer-icon">💡</span>
+            <h4>Quick Rules</h4>
+          </div>
+          <p><strong>Picto:</strong> Crewmates share a secret word. The Imposter does not! Blend in, draw subtle hints, and vote to eliminate the suspect.</p>
+          <p style="margin-top:8px;"><strong>Sketchio:</strong> Guess the drawn word as quickly as you can to score maximum points each round.</p>
+        </div>
+      </div>
+
+      <div class="footer-tos">
+        <a href="#screen-home">Home</a>
+        <a href="#how-to-play">How to Play</a>
+        <a href="mailto:contact@suspecto.io">Contact</a>
+      </div>
+      <div class="footer-notice">Developed by <strong>Arham Ahmad Khan</strong> &mdash; Suspecto is not responsible for any user generated content (drawings, messages, usernames)</div>
+    </footer>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  PICTO LOBBY                           -->
+<!-- ══════════════════════════════════════ -->
+<div id="screen-picto-lobby" class="screen">
+  <div class="screen-header">
+    <a href="#" class="back-btn" data-back="home">&larr; Back to Home</a>
+    <div class="header-logo-wrap">
+      <img src="/img/logo.svg" alt="Suspecto" class="small-logo">
+    </div>
+  </div>
+  <div class="lobby-container">
+    <div class="lobby-badge">🕵️ Social Deduction</div>
+    <h2 class="lobby-title">Picto</h2>
+    <p class="lobby-subtitle">Draw clues, uncover the Imposter, and protect the secret word!</p>
+    <div class="lobby-actions">
+      <button class="btn btn-green btn-large" id="btn-picto-create">🏠 Create Room</button>
+      <button class="btn btn-secondary btn-large" id="btn-picto-join">🚪 Join Room</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  SKETCHIO LOBBY                        -->
+<!-- ══════════════════════════════════════ -->
+<div id="screen-sketchio-lobby" class="screen">
+  <div class="screen-header">
+    <a href="#" class="back-btn" data-back="home">&larr; Back to Home</a>
+    <div class="header-logo-wrap">
+      <img src="/img/logo.svg" alt="Suspecto" class="small-logo">
+    </div>
+  </div>
+  <div class="lobby-container">
+    <div class="lobby-badge">✏️ Drawing &amp; Guessing</div>
+    <h2 class="lobby-title">Sketchio</h2>
+    <p class="lobby-subtitle">Fast-paced drawing and guessing game &mdash; compete for the highest score!</p>
+    <div class="lobby-actions">
+      <button class="btn btn-green btn-large" id="btn-sketchio-create">🏠 Create Room</button>
+      <button class="btn btn-secondary btn-large" id="btn-sketchio-join">🚪 Join Room</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  CREATE ROOM MODAL                     -->
+<!-- ══════════════════════════════════════ -->
+<div id="modal-create" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span id="modal-create-title">Create Room</span>
+      <button class="modal-close" data-close="create">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label for="create-name">Your Name</label>
+      <input type="text" id="create-name" placeholder="Enter your name" maxlength="20" autocomplete="off">
+
+      <div id="create-settings-picto" class="settings-group hidden">
+        <label for="create-maxplayers-picto">Max Players</label>
+        <select id="create-maxplayers-picto">
+          <option value="2">2 (Duel / Test)</option>
+          <option value="4">4 Players</option>
+          <option value="5">5 Players</option>
+          <option value="6" selected>6 Players</option>
+          <option value="7">7 Players</option>
+          <option value="8">8 Players</option>
+          <option value="10">10 Players</option>
+        </select>
+        <label for="create-imposters">Number of Imposters</label>
+        <select id="create-imposters">
+          <option value="1" selected>1 Imposter</option>
+          <option value="2">2 Imposters</option>
+        </select>
+        <label for="create-rounds-picto">Rounds</label>
+        <select id="create-rounds-picto">
+          <option value="2">2 Rounds</option>
+          <option value="3" selected>3 Rounds</option>
+          <option value="4">4 Rounds</option>
+          <option value="5">5 Rounds</option>
+        </select>
+        <label for="create-drawtime-picto">Draw Time (seconds)</label>
+        <select id="create-drawtime-picto">
+          <option value="40">40s</option>
+          <option value="60">60s</option>
+          <option value="80" selected>80s</option>
+          <option value="100">100s</option>
+          <option value="120">120s</option>
+        </select>
+        <label for="create-votetime">Vote Time (seconds)</label>
+        <select id="create-votetime">
+          <option value="20">20s</option>
+          <option value="30" selected>30s</option>
+          <option value="45">45s</option>
+          <option value="60">60s</option>
+        </select>
+        <label for="create-category-picto">Word Category</label>
+        <select id="create-category-picto">
+          <option value="general" selected>General</option>
+          <option value="animals">Animals</option>
+          <option value="concepts">Concepts</option>
+        </select>
+      </div>
+
+      <div id="create-settings-sketchio" class="settings-group hidden">
+        <label for="create-maxplayers-sketchio">Max Players</label>
+        <select id="create-maxplayers-sketchio">
+          <option value="4">4 Players</option>
+          <option value="5">5 Players</option>
+          <option value="6">6 Players</option>
+          <option value="8" selected>8 Players</option>
+          <option value="10">10 Players</option>
+          <option value="12">12 Players</option>
+        </select>
+        <label for="create-rounds-sketchio">Rounds</label>
+        <select id="create-rounds-sketchio">
+          <option value="2">2 Rounds</option>
+          <option value="3" selected>3 Rounds</option>
+          <option value="4">4 Rounds</option>
+          <option value="5">5 Rounds</option>
+          <option value="6">6 Rounds</option>
+        </select>
+        <label for="create-drawtime-sketchio">Draw Time (seconds)</label>
+        <select id="create-drawtime-sketchio">
+          <option value="40">40s</option>
+          <option value="60">60s</option>
+          <option value="80" selected>80s</option>
+          <option value="100">100s</option>
+          <option value="120">120s</option>
+        </select>
+        <label for="create-category-sketchio">Word Category</label>
+        <select id="create-category-sketchio">
+          <option value="animals" selected>Animals</option>
+          <option value="food">Food</option>
+          <option value="objects">Objects</option>
+          <option value="nature">Nature</option>
+          <option value="sports">Sports</option>
+          <option value="misc">Misc</option>
+        </select>
+        <label for="create-wordcount">Words to Choose From</label>
+        <select id="create-wordcount">
+          <option value="2">2 Words</option>
+          <option value="3" selected>3 Words</option>
+          <option value="4">4 Words</option>
+          <option value="5">5 Words</option>
+        </select>
+        <label for="create-customwords">Custom Words (comma-separated, optional)</label>
+        <textarea id="create-customwords" placeholder="apple, car, house, astronaut (leave blank to use defaults)" maxlength="5000"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-green" id="btn-create-confirm">Create Room</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  JOIN ROOM MODAL                       -->
+<!-- ══════════════════════════════════════ -->
+<div id="modal-join" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>Join Room</span>
+      <button class="modal-close" data-close="join">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label for="join-name">Your Name</label>
+      <input type="text" id="join-name" placeholder="Enter your name" maxlength="20" autocomplete="off">
+      <label for="join-code">Room Code</label>
+      <input type="text" id="join-code" placeholder="Enter 6-character code" maxlength="6" style="text-transform:uppercase;letter-spacing:4px">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-green" id="btn-join-confirm">Join Room</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  GAME ROOM (shared for both games)     -->
+<!-- ══════════════════════════════════════ -->
+<div id="screen-room" class="screen">
+  <!-- Top bar -->
+  <div id="game-bar">
+    <div id="game-bar-logo">
+      <a href="#" id="leave-game-btn" class="btn btn-sm btn-secondary">&larr; Leave</a>
+      <span class="bar-brand-tag">Suspecto</span>
+    </div>
+    <div id="game-bar-info">
+      <div id="bar-game-name"></div>
+      <div id="bar-room-code-wrap">
+        Room: <span id="bar-room-code"></span>
+        <button class="btn btn-sm btn-secondary" id="btn-copy-code" title="Copy Room Code">📋 Copy</button>
+        <button class="btn btn-sm btn-secondary" id="btn-copy-invite" title="Copy Invite Link">🔗 Invite</button>
+      </div>
+    </div>
+    <div id="game-bar-status">
+      <div id="bar-timer" class="hidden">⏱ <span id="bar-timer-val">--</span>s</div>
+      <div id="bar-round" class="hidden">Round <span id="bar-round-val">-</span>/<span id="bar-round-total">-</span></div>
+    </div>
+  </div>
+
+  <div id="game-layout">
+    <!-- Left: Players -->
+    <div id="panel-players">
+      <h4>Players</h4>
+      <ul id="players-list"></ul>
+      <!-- Host controls -->
+      <div id="host-controls" class="hidden">
+        <button class="btn btn-green btn-full" id="btn-start-game">▶ Start Game</button>
+        <button class="btn btn-secondary btn-full" id="btn-invite-room">🔗 Invite Friends</button>
+      </div>
+      <!-- Voice chat -->
+      <div id="voice-panel">
+        <h4>Voice Chat</h4>
+        <button class="btn btn-secondary btn-sm btn-full" id="btn-voice-join">🎤 Join Voice</button>
+        <div id="voice-participants"></div>
+      </div>
+    </div>
+
+    <!-- Center: Canvas / Lobby / Overlay -->
+    <div id="panel-center">
+      <!-- Lobby waiting area -->
+      <div id="center-lobby">
+        <div class="waiting-msg">
+          <div class="waiting-icon">⏳</div>
+          <h3>Waiting for host to start...</h3>
+          <p>Share the room code or invite link with friends:</p>
+          <div class="room-code-display" id="lobby-room-code"></div>
+        </div>
+      </div>
+
+      <!-- Canvas area -->
+      <div id="center-canvas" class="hidden">
+        <div id="canvas-header">
+          <div id="canvas-drawer-info">
+            <span id="canvas-drawer-name">?</span> is drawing
+          </div>
+          <div id="canvas-word-display">
+            <span id="canvas-word-blanks">_ _ _ _ _</span>
+          </div>
+        </div>
+        <canvas id="drawing-canvas" width="800" height="600"></canvas>
+        <div id="canvas-overlay" class="hidden">
+          <div id="overlay-content"></div>
+        </div>
+      </div>
+
+      <!-- Drawing toolbar -->
+      <div id="drawing-toolbar" class="hidden">
+        <div class="toolbar-section">
+          <label class="toolbar-label">Tool</label>
+          <div class="toolbar-tools">
+            <button class="tool-btn active" data-tool="pen" title="Pen">✏️</button>
+            <button class="tool-btn" data-tool="eraser" title="Eraser">⬜</button>
+            <button class="tool-btn" data-tool="fill" title="Fill">🪣</button>
+          </div>
+        </div>
+        <div class="toolbar-section">
+          <label class="toolbar-label">Size</label>
+          <div class="size-buttons">
+            <button class="size-btn" data-size="2">•</button>
+            <button class="size-btn active" data-size="6">●</button>
+            <button class="size-btn" data-size="14">⬤</button>
+            <button class="size-btn" data-size="30">⬛</button>
+          </div>
+        </div>
+        <div class="toolbar-section">
+          <label class="toolbar-label">Colors</label>
+          <div class="color-palette" id="color-palette"></div>
+        </div>
+        <div class="toolbar-section">
+          <label class="toolbar-label">Actions</label>
+          <div class="toolbar-actions">
+            <button class="btn btn-sm btn-secondary" id="btn-undo">↩ Undo</button>
+            <button class="btn btn-sm btn-danger" id="btn-clear">🗑 Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Picto Voting Panel -->
+      <div id="picto-voting-panel" class="hidden">
+        <h3>🗳 Vote to Eliminate</h3>
+        <p>Who do you suspect is the Imposter?</p>
+        <div id="voting-players-list"></div>
+      </div>
+
+      <!-- Picto Imposter Guess Panel -->
+      <div id="picto-imposter-guess-panel" class="hidden">
+        <h3>🕵️ You are the Imposter!</h3>
+        <p>You were eliminated. Guess the secret word to steal the victory!</p>
+        <div class="imposter-guess-form">
+          <input type="text" id="imposter-guess-input" placeholder="Type your guess..." maxlength="50" autocomplete="off">
+          <button class="btn btn-green" id="btn-imposter-guess">Guess!</button>
+        </div>
+        <div id="imposter-attempts">3 attempts remaining</div>
+      </div>
+
+      <!-- Sketchio Word Choice Panel -->
+      <div id="sketchio-word-choice" class="hidden">
+        <h3>✏️ Choose a word to draw!</h3>
+        <div id="word-choice-buttons"></div>
+      </div>
+
+      <!-- Game End Panel -->
+      <div id="game-end-panel" class="hidden">
+        <div id="game-end-content"></div>
+        <div class="end-actions">
+          <button class="btn btn-green" id="btn-play-again">Play Again</button>
+          <button class="btn btn-secondary" id="btn-back-lobby">Back to Lobby</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Chat -->
+    <div id="panel-chat">
+      <h4>Chat</h4>
+      <div id="chat-messages"></div>
+      <form id="chat-form">
+        <input type="text" id="chat-input" placeholder="Type a guess or chat..." maxlength="200" autocomplete="off">
+        <button type="submit" class="btn btn-green btn-sm">Send</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!--  TOAST NOTIFICATIONS                   -->
+<!-- ══════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- PICTO VICTORY MEDIA OVERLAY           -->
+<!-- ══════════════════════════════════════ -->
+<div id="victory-media-overlay" class="victory-media-overlay hidden" role="dialog" aria-modal="true" aria-label="Victory Celebration">
+  <div class="victory-media-backdrop"></div>
+  <div class="victory-media-panel">
+    <div class="victory-media-label" id="victory-media-label"></div>
+    <div class="victory-media-img-wrap">
+      <img id="victory-media-img" src="" alt="Victory meme" class="victory-media-img" draggable="false">
+    </div>
+    <div class="victory-media-footer">
+      <button id="victory-media-play-btn" class="btn btn-green victory-play-btn hidden" title="Play Sound">
+        🔊 Play Sound
+      </button>
+      <div class="victory-media-progress">
+        <div id="victory-media-progress-bar" class="victory-media-progress-bar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/voice.js"></script>
+<script src="/js/canvas.js"></script>
+<script src="/js/game.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

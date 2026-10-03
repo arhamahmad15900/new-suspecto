@@ -1,0 +1,18 @@
+{
+  "name": "suspecto",
+  "version": "1.0.0",
+  "description": "Suspecto - Multiplayer Gaming Platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["multiplayer", "game", "drawing"],
+  "author": "Arham Ahmad Khan",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1",
+    "uuid": "^9.0.0"
+  }
+}
