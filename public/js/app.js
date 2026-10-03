@@ -76,6 +76,7 @@
     VoiceChat.init(socket);
     DrawingCanvas.init(document.getElementById('drawing-canvas'), socket);
     GameManager.init(socket);
+    SoundManager.init();
 
     return socket;
   }
@@ -164,7 +165,7 @@
         maxPlayers: parseInt(document.getElementById('create-maxplayers-picto').value),
         numImposters: parseInt(document.getElementById('create-imposters').value),
         rounds: parseInt(document.getElementById('create-rounds-picto').value),
-        drawTime: parseInt(document.getElementById('create-drawtime-picto').value),
+        playerDrawTime: parseInt(document.getElementById('create-playerdrawtime').value),
         voteTime: parseInt(document.getElementById('create-votetime').value),
         category: document.getElementById('create-category-picto').value
       };
@@ -176,8 +177,9 @@
         rounds: parseInt(document.getElementById('create-rounds-sketchio').value),
         drawTime: parseInt(document.getElementById('create-drawtime-sketchio').value),
         category: document.getElementById('create-category-sketchio').value,
-        wordCount: parseInt(document.getElementById('create-wordcount').value),
+        difficulty: document.getElementById('create-difficulty-sketchio').value,
         customWords
+        // wordCount intentionally omitted — server always uses 3
       };
     }
 
@@ -292,17 +294,44 @@
     input.value = '';
   };
 
-  // ── PICTO IMPOSTER GUESS ─────────────────────────────────────────────
+  // ── PICTO IMPOSTER GUESS — Single attempt ────────────────────────────
+  let imposterGuessSubmitted = false;
+
   document.getElementById('btn-imposter-guess').onclick = () => {
+    if (imposterGuessSubmitted) return;
     const guess = document.getElementById('imposter-guess-input').value.trim();
-    if (!guess) return;
+    if (!guess) { showToast('Please type a guess.', 'error'); return; }
+    imposterGuessSubmitted = true;
     socket.emit('picto:imposterGuess', { guess });
-    document.getElementById('imposter-guess-input').value = '';
+
+    // Immediately lock UI (server will confirm via picto:imposterGuessFeedback)
+    document.getElementById('imposter-guess-input').disabled = true;
+    document.getElementById('btn-imposter-guess').disabled = true;
+    document.getElementById('imposter-guess-status').textContent = '\u23F3 Guess submitted — waiting for result...';
   };
+
+  // When the imposter guess panel opens (server tells us it's our turn to guess),
+  // reset the flag so a fresh attempt is allowed for this game session.
+  // Note: socket is created above; add this listener once socket is initialized.
+  // We hook into this after socket is connected (inside connectSocket() callback
+  // won't work cleanly, so we use a deferred approach).
+  window._resetImposterGuessFlag = () => { imposterGuessSubmitted = false; };
 
   document.getElementById('imposter-guess-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('btn-imposter-guess').click();
   });
+
+  // ── PICTO NEXT PERSON button ─────────────────────────────────────────
+  document.getElementById('btn-picto-next-person').onclick = () => {
+    if (!socket) return;
+    socket.emit('picto:nextPerson');
+    // Disable button immediately to prevent double-click
+    document.getElementById('btn-picto-next-person').disabled = true;
+  };
+
+  // Re-enable Next Person when a new drawing turn starts (handled in game.js)
+  // Listen for picto:drawingTurn to reset the button
+  // (This is handled in game.js via DrawingCanvas.setDrawer and the button wrap show/hide)
 
   // ── VOICE BUTTON ─────────────────────────────────────────────────────
   document.getElementById('btn-voice-join').onclick = async () => {
@@ -334,12 +363,8 @@
 
   // ── RESIZE HANDLER ────────────────────────────────────────────────────
   window.addEventListener('resize', () => {
-    // Ensure canvas maintains proper dimensions
-    const canvas = document.getElementById('drawing-canvas');
-    if (canvas) {
-      // Canvas element dimensions are fixed at 800x600
-      // CSS handles the responsive scaling
-    }
+    // Canvas element dimensions are fixed at 800x600
+    // CSS handles the responsive scaling
   });
 
   // ── PAGE VISIBILITY ──────────────────────────────────────────────────
@@ -351,7 +376,6 @@
 
   // ── HANDLE RECONNECT FROM STORAGE ────────────────────────────────────
   window.addEventListener('pageshow', () => {
-    // If refreshed mid-game, offer reconnect
     const savedRoom = sessionStorage.getItem('suspecto-room');
     const savedName = localStorage.getItem('suspecto-name');
     if (savedRoom && savedName && socket) {

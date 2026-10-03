@@ -16,8 +16,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/mems', express.static(path.join(__dirname, 'mems')));
 
 // Serve audio with correct MIME types.
-// .mpeg files here are MP3-encoded (ID3v2 header confirmed); fix Content-Type so
-// browsers can play them as audio via HTMLAudioElement without codec issues.
 const audioStaticOpts = {
   setHeaders(res, filePath) {
     const ext = path.extname(filePath).toLowerCase();
@@ -37,17 +35,218 @@ app.use(express.json());
 const rooms = new Map();   // roomCode → RoomState
 
 // ─────────────────────────────────────────
-//  WORD LISTS
+//  WORD LISTS — Sketchio with difficulty
 // ─────────────────────────────────────────
-const SKETCHIO_WORDS = {
-  animals: ['cat','dog','elephant','giraffe','lion','penguin','dolphin','butterfly','eagle','shark','rabbit','turtle','monkey','bear','wolf','fox','deer','zebra','parrot','owl','frog','snake','tiger','panda','koala','horse','cow','pig','sheep','goat'],
-  food: ['pizza','burger','sushi','taco','pasta','salad','cake','cookie','donut','ice cream','apple','banana','sandwich','hot dog','soup','bread','pancake','waffle','steak','lobster','mango','grape','watermelon','pineapple','coffee'],
-  objects: ['umbrella','telescope','guitar','camera','compass','lantern','anchor','bicycle','balloon','trophy','crown','sword','shield','clock','globe','key','lock','book','pencil','hammer','scissors','mirror','candle','backpack','hat'],
-  nature: ['rainbow','volcano','waterfall','mountain','island','forest','desert','glacier','tornado','lightning','snowflake','cloud','sun','moon','star','flower','tree','mushroom','coral','wave'],
-  sports: ['basketball','football','tennis','swimming','surfing','skiing','archery','boxing','gymnastics','baseball','volleyball','soccer','golf','cycling','wrestling','skating','bowling','fencing','chess','poker'],
-  misc: ['castle','spaceship','submarine','robot','wizard','pirate','ninja','mermaid','dragon','ghost','alien','knight','superhero','detective','scientist','chef','astronaut','firefighter','doctor','teacher']
+// Each word object: { word, difficulty }
+// difficulty: 'easy' | 'medium' | 'hard'
+
+const SKETCHIO_WORDS_BY_CATEGORY = {
+  animals: [
+    // Easy
+    { word: 'cat', difficulty: 'easy' },
+    { word: 'dog', difficulty: 'easy' },
+    { word: 'fish', difficulty: 'easy' },
+    { word: 'bird', difficulty: 'easy' },
+    { word: 'cow', difficulty: 'easy' },
+    { word: 'pig', difficulty: 'easy' },
+    { word: 'duck', difficulty: 'easy' },
+    { word: 'frog', difficulty: 'easy' },
+    { word: 'bee', difficulty: 'easy' },
+    { word: 'ant', difficulty: 'easy' },
+    // Medium
+    { word: 'elephant', difficulty: 'medium' },
+    { word: 'giraffe', difficulty: 'medium' },
+    { word: 'penguin', difficulty: 'medium' },
+    { word: 'dolphin', difficulty: 'medium' },
+    { word: 'rabbit', difficulty: 'medium' },
+    { word: 'turtle', difficulty: 'medium' },
+    { word: 'monkey', difficulty: 'medium' },
+    { word: 'parrot', difficulty: 'medium' },
+    { word: 'butterfly', difficulty: 'medium' },
+    { word: 'kangaroo', difficulty: 'medium' },
+    { word: 'panda', difficulty: 'medium' },
+    { word: 'koala', difficulty: 'medium' },
+    { word: 'octopus', difficulty: 'medium' },
+    { word: 'flamingo', difficulty: 'medium' },
+    // Hard
+    { word: 'chameleon', difficulty: 'hard' },
+    { word: 'platypus', difficulty: 'hard' },
+    { word: 'axolotl', difficulty: 'hard' },
+    { word: 'narwhal', difficulty: 'hard' },
+    { word: 'pangolin', difficulty: 'hard' },
+    { word: 'wombat', difficulty: 'hard' },
+  ],
+  food: [
+    { word: 'apple', difficulty: 'easy' },
+    { word: 'banana', difficulty: 'easy' },
+    { word: 'pizza', difficulty: 'easy' },
+    { word: 'cake', difficulty: 'easy' },
+    { word: 'cookie', difficulty: 'easy' },
+    { word: 'bread', difficulty: 'easy' },
+    { word: 'egg', difficulty: 'easy' },
+    { word: 'corn', difficulty: 'easy' },
+    { word: 'grape', difficulty: 'easy' },
+    { word: 'milk', difficulty: 'easy' },
+    { word: 'burger', difficulty: 'medium' },
+    { word: 'sushi', difficulty: 'medium' },
+    { word: 'taco', difficulty: 'medium' },
+    { word: 'pasta', difficulty: 'medium' },
+    { word: 'donut', difficulty: 'medium' },
+    { word: 'sandwich', difficulty: 'medium' },
+    { word: 'hot dog', difficulty: 'medium' },
+    { word: 'pancake', difficulty: 'medium' },
+    { word: 'waffle', difficulty: 'medium' },
+    { word: 'mango', difficulty: 'medium' },
+    { word: 'pineapple', difficulty: 'medium' },
+    { word: 'watermelon', difficulty: 'medium' },
+    { word: 'lobster', difficulty: 'hard' },
+    { word: 'spaghetti', difficulty: 'hard' },
+    { word: 'soufflé', difficulty: 'hard' },
+    { word: 'bruschetta', difficulty: 'hard' },
+    { word: 'quiche', difficulty: 'hard' },
+    { word: 'croissant', difficulty: 'hard' },
+  ],
+  objects: [
+    { word: 'umbrella', difficulty: 'easy' },
+    { word: 'key', difficulty: 'easy' },
+    { word: 'book', difficulty: 'easy' },
+    { word: 'clock', difficulty: 'easy' },
+    { word: 'hat', difficulty: 'easy' },
+    { word: 'sock', difficulty: 'easy' },
+    { word: 'cup', difficulty: 'easy' },
+    { word: 'chair', difficulty: 'easy' },
+    { word: 'table', difficulty: 'easy' },
+    { word: 'phone', difficulty: 'easy' },
+    { word: 'guitar', difficulty: 'medium' },
+    { word: 'camera', difficulty: 'medium' },
+    { word: 'compass', difficulty: 'medium' },
+    { word: 'lantern', difficulty: 'medium' },
+    { word: 'anchor', difficulty: 'medium' },
+    { word: 'bicycle', difficulty: 'medium' },
+    { word: 'balloon', difficulty: 'medium' },
+    { word: 'trophy', difficulty: 'medium' },
+    { word: 'telescope', difficulty: 'medium' },
+    { word: 'backpack', difficulty: 'medium' },
+    { word: 'microscope', difficulty: 'hard' },
+    { word: 'hourglass', difficulty: 'hard' },
+    { word: 'periscope', difficulty: 'hard' },
+    { word: 'thermometer', difficulty: 'hard' },
+    { word: 'kaleidoscope', difficulty: 'hard' },
+    { word: 'metronome', difficulty: 'hard' },
+  ],
+  nature: [
+    { word: 'sun', difficulty: 'easy' },
+    { word: 'moon', difficulty: 'easy' },
+    { word: 'star', difficulty: 'easy' },
+    { word: 'tree', difficulty: 'easy' },
+    { word: 'flower', difficulty: 'easy' },
+    { word: 'cloud', difficulty: 'easy' },
+    { word: 'rain', difficulty: 'easy' },
+    { word: 'wave', difficulty: 'easy' },
+    { word: 'leaf', difficulty: 'easy' },
+    { word: 'rainbow', difficulty: 'medium' },
+    { word: 'waterfall', difficulty: 'medium' },
+    { word: 'mountain', difficulty: 'medium' },
+    { word: 'island', difficulty: 'medium' },
+    { word: 'forest', difficulty: 'medium' },
+    { word: 'desert', difficulty: 'medium' },
+    { word: 'snowflake', difficulty: 'medium' },
+    { word: 'mushroom', difficulty: 'medium' },
+    { word: 'coral', difficulty: 'medium' },
+    { word: 'volcano', difficulty: 'medium' },
+    { word: 'glacier', difficulty: 'hard' },
+    { word: 'tornado', difficulty: 'hard' },
+    { word: 'aurora', difficulty: 'hard' },
+    { word: 'stalactite', difficulty: 'hard' },
+    { word: 'geyser', difficulty: 'hard' },
+  ],
+  sports: [
+    { word: 'swimming', difficulty: 'easy' },
+    { word: 'running', difficulty: 'easy' },
+    { word: 'jumping', difficulty: 'easy' },
+    { word: 'soccer', difficulty: 'easy' },
+    { word: 'tennis', difficulty: 'easy' },
+    { word: 'golf', difficulty: 'easy' },
+    { word: 'boxing', difficulty: 'medium' },
+    { word: 'basketball', difficulty: 'medium' },
+    { word: 'football', difficulty: 'medium' },
+    { word: 'surfing', difficulty: 'medium' },
+    { word: 'skiing', difficulty: 'medium' },
+    { word: 'archery', difficulty: 'medium' },
+    { word: 'gymnastics', difficulty: 'medium' },
+    { word: 'baseball', difficulty: 'medium' },
+    { word: 'volleyball', difficulty: 'medium' },
+    { word: 'cycling', difficulty: 'medium' },
+    { word: 'wrestling', difficulty: 'hard' },
+    { word: 'fencing', difficulty: 'hard' },
+    { word: 'bobsled', difficulty: 'hard' },
+    { word: 'discus throw', difficulty: 'hard' },
+    { word: 'pole vault', difficulty: 'hard' },
+  ],
+  misc: [
+    { word: 'castle', difficulty: 'easy' },
+    { word: 'ghost', difficulty: 'easy' },
+    { word: 'crown', difficulty: 'easy' },
+    { word: 'sword', difficulty: 'easy' },
+    { word: 'shield', difficulty: 'easy' },
+    { word: 'pirate', difficulty: 'medium' },
+    { word: 'ninja', difficulty: 'medium' },
+    { word: 'robot', difficulty: 'medium' },
+    { word: 'wizard', difficulty: 'medium' },
+    { word: 'mermaid', difficulty: 'medium' },
+    { word: 'dragon', difficulty: 'medium' },
+    { word: 'alien', difficulty: 'medium' },
+    { word: 'knight', difficulty: 'medium' },
+    { word: 'superhero', difficulty: 'medium' },
+    { word: 'spaceship', difficulty: 'hard' },
+    { word: 'submarine', difficulty: 'hard' },
+    { word: 'detective', difficulty: 'hard' },
+    { word: 'astronaut', difficulty: 'hard' },
+    { word: 'archaeologist', difficulty: 'hard' },
+  ],
+  twoword: [
+    // Easy two-word phrases
+    { word: 'fire truck', difficulty: 'easy' },
+    { word: 'hot dog', difficulty: 'easy' },
+    { word: 'sun glasses', difficulty: 'easy' },
+    { word: 'rain bow', difficulty: 'easy' },
+    { word: 'door bell', difficulty: 'easy' },
+    { word: 'book shelf', difficulty: 'easy' },
+    { word: 'foot ball', difficulty: 'easy' },
+    { word: 'snow man', difficulty: 'easy' },
+    { word: 'sea horse', difficulty: 'easy' },
+    { word: 'butter fly', difficulty: 'easy' },
+    // Medium two-word phrases
+    { word: 'water tank', difficulty: 'medium' },
+    { word: 'hand wash', difficulty: 'medium' },
+    { word: 'tooth brush', difficulty: 'medium' },
+    { word: 'swimming pool', difficulty: 'medium' },
+    { word: 'coffee cup', difficulty: 'medium' },
+    { word: 'life guard', difficulty: 'medium' },
+    { word: 'sand castle', difficulty: 'medium' },
+    { word: 'treasure map', difficulty: 'medium' },
+    { word: 'roller coaster', difficulty: 'medium' },
+    { word: 'shooting star', difficulty: 'medium' },
+    { word: 'lemon tree', difficulty: 'medium' },
+    { word: 'wind mill', difficulty: 'medium' },
+    { word: 'light house', difficulty: 'medium' },
+    { word: 'basket ball', difficulty: 'medium' },
+    { word: 'flower pot', difficulty: 'medium' },
+    // Hard two-word phrases
+    { word: 'solar panel', difficulty: 'hard' },
+    { word: 'time machine', difficulty: 'hard' },
+    { word: 'black hole', difficulty: 'hard' },
+    { word: 'steam engine', difficulty: 'hard' },
+    { word: 'escape route', difficulty: 'hard' },
+    { word: 'grand canyon', difficulty: 'hard' },
+    { word: 'brain storm', difficulty: 'hard' },
+    { word: 'chain reaction', difficulty: 'hard' },
+    { word: 'double agent', difficulty: 'hard' },
+    { word: 'fast forward', difficulty: 'hard' },
+  ],
 };
 
+// Legacy flat word lists for Picto (unchanged)
 const PICTO_WORDS = {
   general: ['adventure','mystery','celebration','danger','escape','freedom','hidden','journey','power','secret','shadow','silence','storm','strength','victory','wisdom','wonder','ancient','brave','clever','curious','gentle','honest','loyal','peaceful','rebel','swift','timid','wild','young'],
   animals: ['lion','shark','eagle','wolf','panther','cobra','falcon','jaguar','viper','hawk','bear','tiger','raven','fox','owl'],
@@ -77,13 +276,39 @@ function pickRandom(arr, n = 1) {
   return shuffled.slice(0, Math.min(n, shuffled.length));
 }
 
-function getWordList(game, category = 'general') {
-  if (game === 'sketchio') {
-    const list = SKETCHIO_WORDS[category] || SKETCHIO_WORDS.animals;
-    return list;
+/**
+ * Get Sketchio word list filtered by category and difficulty.
+ * category: 'random' | 'twoword' | 'animals' | 'food' | 'objects' | 'nature' | 'sports' | 'misc'
+ * difficulty: 'easy' | 'medium' | 'hard' | '' (any)
+ * Returns array of word strings.
+ */
+function getSketchioWordList(category, difficulty) {
+  let wordObjs = [];
+
+  if (category === 'random') {
+    // Combine all non-twoword categories
+    for (const [cat, words] of Object.entries(SKETCHIO_WORDS_BY_CATEGORY)) {
+      if (cat !== 'twoword') wordObjs.push(...words);
+    }
+  } else if (SKETCHIO_WORDS_BY_CATEGORY[category]) {
+    wordObjs = SKETCHIO_WORDS_BY_CATEGORY[category];
+  } else {
+    // Fallback: all animals
+    wordObjs = SKETCHIO_WORDS_BY_CATEGORY.animals;
   }
-  const list = PICTO_WORDS[category] || PICTO_WORDS.general;
-  return list;
+
+  // Filter by difficulty if specified
+  if (difficulty && difficulty !== 'any') {
+    const filtered = wordObjs.filter(w => w.difficulty === difficulty);
+    // Only use filtered if we have enough words; otherwise use all
+    if (filtered.length >= 3) wordObjs = filtered;
+  }
+
+  return wordObjs.map(w => w.word);
+}
+
+function getPictoWordList(category) {
+  return PICTO_WORDS[category] || PICTO_WORDS.general;
 }
 
 // ─────────────────────────────────────────
@@ -102,12 +327,15 @@ function createRoom(game, hostId, hostName, settings) {
       drawTime: settings.drawTime || 80,
       voteTime: settings.voteTime || 30,
       category: settings.category || 'general',
+      difficulty: settings.difficulty || 'any',
       customWords: settings.customWords || [],
       numImposters: settings.numImposters || 1,
-      wordCount: settings.wordCount || 3,
-      hints: settings.hints || 2
+      wordCount: 3,  // Always 3 choices for Sketchio
+      hints: settings.hints || 2,
+      // Picto-specific: per-player draw time (15–20s default)
+      playerDrawTime: settings.playerDrawTime || 20,
     },
-    state: 'lobby',   // lobby | playing | voting | ended
+    state: 'lobby',   // lobby | playing | voting | ended | imposterGuess
     round: 0,
     currentDrawerIndex: 0,
     currentWord: null,
@@ -122,7 +350,12 @@ function createRoom(game, hostId, hostName, settings) {
     secretWord: null,
     imposterId: null,
     imposterGuessAttempts: 0,
-    scores: {}
+    scores: {},
+
+    // Picto sequential drawing state
+    pictoDrawOrder: [],          // ordered list of player IDs for the current drawing round
+    pictoDrawOrderIndex: -1,     // index into pictoDrawOrder for current drawer
+    pictoHasDrawn: new Set(),    // IDs of players who have drawn in current round
   };
   rooms.set(code, room);
   return room;
@@ -193,6 +426,7 @@ function getPublicRoom(room) {
 function clearRoomTimers(room) {
   if (room.roundTimer) { clearTimeout(room.roundTimer); room.roundTimer = null; }
   if (room.voteTimer) { clearTimeout(room.voteTimer); room.voteTimer = null; }
+  if (room.wordPickTimer) { clearTimeout(room.wordPickTimer); room.wordPickTimer = null; }
 }
 
 // ─────────────────────────────────────────
@@ -210,7 +444,7 @@ function sketchioStartRound(room) {
     return;
   }
 
-  // Advance drawer
+  // Advance drawer (cycle through connected players)
   let attempts = 0;
   do {
     room.currentDrawerIndex = (room.currentDrawerIndex + 1) % room.players.length;
@@ -220,18 +454,36 @@ function sketchioStartRound(room) {
   const drawer = room.players[room.currentDrawerIndex];
   if (!drawer) { sketchioEndGame(room); return; }
 
-  // Pick word options
-  const allWords = room.settings.customWords.length >= 10
-    ? room.settings.customWords
-    : [...getWordList('sketchio', room.settings.category), ...room.settings.customWords];
+  // Pick word options (always 3, respecting category+difficulty)
+  const category = room.settings.category || 'animals';
+  const difficulty = room.settings.difficulty || 'any';
 
-  room.wordOptions = pickRandom(allWords, Math.min(room.settings.wordCount, allWords.length));
+  let wordPool;
+  if (room.settings.customWords && room.settings.customWords.length >= 10) {
+    wordPool = room.settings.customWords;
+  } else {
+    wordPool = getSketchioWordList(category, difficulty);
+    if (room.settings.customWords && room.settings.customWords.length > 0) {
+      wordPool = [...wordPool, ...room.settings.customWords];
+    }
+  }
+
+  // Deduplicate
+  wordPool = [...new Set(wordPool)];
+
+  room.wordOptions = pickRandom(wordPool, Math.min(3, wordPool.length));
+  // Ensure exactly 3 (pad with alternatives if not enough)
+  while (room.wordOptions.length < 3 && wordPool.length > 0) {
+    const extra = pickRandom(wordPool, 1);
+    if (!room.wordOptions.includes(extra)) room.wordOptions.push(extra);
+  }
+
   room.currentWord = null;
 
   // Reset player guess states
   room.players.forEach(p => { p.hasGuessed = false; });
 
-  // Send word choices only to drawer
+  // Send word choices only to drawer (always exactly 3)
   io.to(drawer.id).emit('sketchio:wordChoices', { words: room.wordOptions });
   // Tell everyone else a new turn is starting
   io.to(room.code).emit('sketchio:newTurn', {
@@ -240,13 +492,16 @@ function sketchioStartRound(room) {
     wordLength: null // Not known until drawer picks
   });
 
-  // If drawer doesn't pick within 15s, auto-pick
+  // Sound: new turn
+  io.to(room.code).emit('game:sound', { sound: 'newTurn' });
+
+  // If drawer doesn't pick within 20s, auto-pick first option
   room.wordPickTimer = setTimeout(() => {
-    if (!room.currentWord) {
+    if (!room.currentWord && room.state === 'playing') {
       room.currentWord = room.wordOptions[0] || 'apple';
       startSketchioDrawTimer(room);
     }
-  }, 15000);
+  }, 20000);
 }
 
 function startSketchioDrawTimer(room) {
@@ -266,17 +521,20 @@ function startSketchioDrawTimer(room) {
   room.revealedLetterIndices = new Set();
   const blanks = formatBlanks(room.currentWord, room.revealedLetterIndices);
 
+  const startTime = Date.now();
+  const totalTime = room.settings.drawTime;
+
   io.to(room.code).emit('sketchio:roundStart', {
     drawerId: drawer.id,
     drawerName: drawer.name,
     wordBlanks: blanks,
     wordLength: room.currentWord.length,
-    drawTime: room.settings.drawTime
+    drawTime: totalTime,
+    startTime   // Server timestamp for client synchronization
   });
   // Drawer gets the actual word
   io.to(drawer.id).emit('sketchio:yourWord', { word: room.currentWord });
 
-  const totalTime = room.settings.drawTime;
   let timeLeft = totalTime;
   const tick = () => {
     io.to(room.code).emit('sketchio:timer', { timeLeft });
@@ -288,6 +546,10 @@ function startSketchioDrawTimer(room) {
     // Hint 2 at 25% time left
     if (timeLeft === Math.floor(totalTime * 0.25) && room.currentWord.length > 4) {
       revealRandomSketchioHint(room);
+    }
+    // Countdown warning at 10s
+    if (timeLeft === 10) {
+      io.to(room.code).emit('game:sound', { sound: 'countdownWarning' });
     }
 
     if (timeLeft <= 0) { sketchioEndTurn(room, false); return; }
@@ -319,7 +581,6 @@ function revealRandomSketchioHint(room) {
 
 function sketchioEndTurn(room, allGuessed) {
   clearRoomTimers(room);
-  if (room.wordPickTimer) { clearTimeout(room.wordPickTimer); room.wordPickTimer = null; }
 
   const drawer = room.players[room.currentDrawerIndex];
   // Score drawer based on how many guessed
@@ -335,9 +596,11 @@ function sketchioEndTurn(room, allGuessed) {
     scores: room.players.map(p => ({ id: p.id, name: p.name, score: p.score }))
   });
 
+  // Sound: turn end
+  io.to(room.code).emit('game:sound', { sound: 'timerEnd' });
+
   // Check if all players have drawn this round
   const connectedCount = room.players.filter(p => p.connected).length;
-  // Count turns within a round — track by a round-turn counter
   room._turnCount = (room._turnCount || 0) + 1;
   if (room._turnCount >= connectedCount) {
     room._turnCount = 0;
@@ -345,6 +608,7 @@ function sketchioEndTurn(room, allGuessed) {
     if (room.round >= room.settings.rounds) {
       setTimeout(() => sketchioEndGame(room), 3000);
     } else {
+      io.to(room.code).emit('game:sound', { sound: 'newRound' });
       setTimeout(() => sketchioStartRound(room), 3000);
     }
   } else {
@@ -360,11 +624,20 @@ function sketchioEndGame(room) {
     winner: sorted[0] || null,
     rankings: sorted.map((p, i) => ({ rank: i + 1, id: p.id, name: p.name, score: p.score }))
   });
+  io.to(room.code).emit('game:sound', { sound: 'gameEnd' });
 }
 
 // ─────────────────────────────────────────
-//  PICTO GAME LOGIC
+//  PICTO GAME LOGIC — Sequential Drawing
 // ─────────────────────────────────────────
+/*
+  Picto round flow:
+  1. All connected, non-eliminated players draw in sequence (one at a time).
+     Canvas PERSISTS between drawers (do NOT clear).
+  2. After all players draw, voting begins.
+  3. Votes tally → elimination → possibly imposter guess → next round or end.
+*/
+
 function pictoStartGame(room) {
   clearRoomTimers(room);
   room.state = 'playing';
@@ -373,6 +646,9 @@ function pictoStartGame(room) {
   room.votes = {};
   room._turnCount = 0;
   room.currentDrawerIndex = -1;
+  room.pictoDrawOrder = [];
+  room.pictoDrawOrderIndex = -1;
+  room.pictoHasDrawn = new Set();
 
   // Assign roles
   const playerIds = room.players.map(p => p.id);
@@ -383,7 +659,7 @@ function pictoStartGame(room) {
   // Pick secret word
   const wordList = room.settings.customWords.length >= 5
     ? room.settings.customWords
-    : getWordList('picto', room.settings.category);
+    : getPictoWordList(room.settings.category);
   room.secretWord = pickRandom(wordList);
   room.imposterId = impostersArr[0]; // Primary imposter for win condition
 
@@ -415,49 +691,125 @@ function pictoStartGame(room) {
     round: room.round
   });
 
-  setTimeout(() => pictoStartDrawingTurn(room), 2000);
+  io.to(room.code).emit('game:sound', { sound: 'newRound' });
+
+  setTimeout(() => pictoStartDrawingPhase(room), 2000);
 }
 
-function pictoStartDrawingTurn(room) {
+/**
+ * Start the sequential drawing phase for the current round.
+ * Builds an ordered draw list from all connected, non-eliminated players.
+ */
+function pictoStartDrawingPhase(room) {
   clearRoomTimers(room);
-  room.drawHistory = [];
-  room.state = 'playing';
 
-  const activePlayers = room.players.filter(p => p.connected && !room.eliminated.includes(p.id));
-  if (activePlayers.length < 2) {
+  const eligible = room.players.filter(
+    p => p.connected && !room.eliminated.includes(p.id)
+  );
+
+  if (eligible.length < 2) {
     pictoEndGame(room, 'crewmates');
     return;
   }
 
-  // Next drawer (skip eliminated)
-  let attempts = 0;
-  do {
-    room.currentDrawerIndex = (room.currentDrawerIndex + 1) % room.players.length;
-    attempts++;
-  } while (
-    (room.eliminated.includes(room.players[room.currentDrawerIndex]?.id) ||
-     !room.players[room.currentDrawerIndex]?.connected) &&
-    attempts <= room.players.length
-  );
+  // Build the draw order for this round
+  room.pictoDrawOrder = eligible.map(p => p.id);
+  room.pictoDrawOrderIndex = -1;
+  room.pictoHasDrawn = new Set();
+  room.drawHistory = []; // Fresh canvas for each round
 
-  const drawer = room.players[room.currentDrawerIndex];
-  if (!drawer) { pictoEndGame(room, 'crewmates'); return; }
+  io.to(room.code).emit('picto:drawPhaseStart', {
+    totalDrawers: room.pictoDrawOrder.length,
+    round: room.round
+  });
+
+  // Clear canvas for all clients at start of draw phase
+  io.to(room.code).emit('draw:clear');
+
+  setTimeout(() => pictoNextDrawer(room), 1500);
+}
+
+/**
+ * Advance to the next drawer in the sequential draw order.
+ */
+function pictoNextDrawer(room) {
+  clearRoomTimers(room);
+
+  // Move to next in sequence
+  room.pictoDrawOrderIndex++;
+
+  // Skip disconnected players
+  while (
+    room.pictoDrawOrderIndex < room.pictoDrawOrder.length &&
+    !room.players.find(p => p.id === room.pictoDrawOrder[room.pictoDrawOrderIndex])?.connected
+  ) {
+    room.pictoDrawOrderIndex++;
+  }
+
+  // If we've exhausted the draw order, start voting
+  if (room.pictoDrawOrderIndex >= room.pictoDrawOrder.length) {
+    pictoStartVoting(room);
+    return;
+  }
+
+  const drawerId = room.pictoDrawOrder[room.pictoDrawOrderIndex];
+  const drawer = room.players.find(p => p.id === drawerId);
+  if (!drawer) {
+    pictoNextDrawer(room); // skip missing player
+    return;
+  }
+
+  // Update currentDrawerIndex to match for draw:event validation
+  room.currentDrawerIndex = room.players.findIndex(p => p.id === drawerId);
+
+  const drawTime = room.settings.playerDrawTime || 20;
+  const startTime = Date.now();
+  const isLastDrawer = room.pictoDrawOrderIndex === room.pictoDrawOrder.length - 1;
 
   io.to(room.code).emit('picto:drawingTurn', {
     drawerId: drawer.id,
     drawerName: drawer.name,
-    drawTime: room.settings.drawTime,
-    round: room.round
+    drawTime,
+    round: room.round,
+    drawerNumber: room.pictoDrawOrderIndex + 1,
+    totalDrawers: room.pictoDrawOrder.length,
+    startTime,
+    isLastDrawer
   });
 
-  let timeLeft = room.settings.drawTime;
+  io.to(room.code).emit('game:sound', { sound: 'newTurn' });
+
+  let timeLeft = drawTime;
   const tick = () => {
     io.to(room.code).emit('picto:timer', { timeLeft, phase: 'drawing' });
-    if (timeLeft <= 0) { pictoStartVoting(room); return; }
+    if (timeLeft === 10) {
+      io.to(room.code).emit('game:sound', { sound: 'countdownWarning' });
+    }
+    if (timeLeft <= 0) {
+      // Auto-advance when timer expires
+      pictoNextDrawer(room);
+      return;
+    }
     timeLeft--;
     room.roundTimer = setTimeout(tick, 1000);
   };
   room.roundTimer = setTimeout(tick, 0);
+}
+
+/**
+ * Handle "Next Person" request from the current active drawer.
+ * Server validates: only the current authorized drawer can advance.
+ */
+function pictoSkipToNextDrawer(room, requestingSocketId) {
+  if (!room || room.state !== 'playing') return false;
+
+  // Validate: must be the current drawer
+  const drawerId = room.pictoDrawOrder[room.pictoDrawOrderIndex];
+  if (requestingSocketId !== drawerId) return false;
+
+  clearRoomTimers(room);
+  pictoNextDrawer(room);
+  return true;
 }
 
 function pictoStartVoting(room) {
@@ -471,6 +823,8 @@ function pictoStartVoting(room) {
     eligiblePlayers: eligible.map(p => ({ id: p.id, name: p.name })),
     voteTime: room.settings.voteTime
   });
+
+  io.to(room.code).emit('game:sound', { sound: 'votingPhase' });
 
   let timeLeft = room.settings.voteTime;
   const tick = () => {
@@ -499,7 +853,6 @@ function pictoTallyVotes(room) {
   }
 
   if (tied || !eliminated) {
-    // No elimination on tie
     io.to(room.code).emit('picto:voteResult', {
       eliminated: null,
       tie: true,
@@ -523,25 +876,27 @@ function pictoTallyVotes(room) {
   });
 
   if (isImposter) {
-    // Notify all players that imposter has a final chance to guess
+    // Imposter gets ONE chance to guess the secret word
     io.to(room.code).emit('picto:imposterGuessing', {
       imposterId: eliminated,
       imposterName: eliminatedPlayer?.name || 'Imposter',
-      timeLimit: 20
+      timeLimit: 30
     });
 
-    // Imposter gets a chance to guess the secret word
     io.to(eliminated).emit('picto:imposterGuessChance', {
       message: 'You have been eliminated! You are the Imposter. Guess the secret word to still win!'
     });
+
     room.state = 'imposterGuess';
     room.imposterGuessAttempts = 0;
-    // 20 second window to guess
+    room.imposterGuessSubmitted = false;
+
+    // 30-second window to guess
     room.imposterGuessTimer = setTimeout(() => {
       if (room.state === 'imposterGuess') {
         pictoEndGame(room, 'crewmates');
       }
-    }, 20000);
+    }, 30000);
   } else {
     // Check if enough crewmates are eliminated
     const activePlayers = room.players.filter(p => !room.eliminated.includes(p.id) && p.connected);
@@ -559,7 +914,6 @@ function pictoNextRoundOrEnd(room) {
   const activePlayers = room.players.filter(p => !room.eliminated.includes(p.id) && p.connected);
 
   if (room._turnCount >= room.settings.rounds || activePlayers.length < 2) {
-    // Game over without imposter found — imposter wins by default
     const imposter = room.players.find(p => p.role === 'imposter');
     if (imposter && !room.eliminated.includes(imposter.id)) {
       pictoEndGame(room, 'imposters');
@@ -569,7 +923,8 @@ function pictoNextRoundOrEnd(room) {
   } else {
     room.round++;
     io.to(room.code).emit('picto:newRound', { round: room.round });
-    setTimeout(() => pictoStartDrawingTurn(room), 2000);
+    io.to(room.code).emit('game:sound', { sound: 'newRound' });
+    setTimeout(() => pictoStartDrawingPhase(room), 2000);
   }
 }
 
@@ -594,20 +949,17 @@ function pictoEndGame(room, winner) {
   room.state = 'ended';
   const imposter = room.players.find(p => p.role === 'imposter');
 
-  // Select victory media combination once per match, server-side, avoiding repeat
   const mediaPool = PICTO_VICTORY_MEDIA[winner] || PICTO_VICTORY_MEDIA.crewmates;
   let mediaIndex = Math.floor(Math.random() * mediaPool.length);
-  // Avoid repeating the same combo as last match in this room
   if (mediaPool.length > 1 && room._lastVictoryMediaIndex === mediaIndex) {
     mediaIndex = (mediaIndex + 1) % mediaPool.length;
   }
   room._lastVictoryMediaIndex = mediaIndex;
   const selectedMedia = mediaPool[mediaIndex];
-  // Unique match ID to prevent duplicate playback on re-render / reconnect
   const matchId = uuidv4();
 
   io.to(room.code).emit('picto:gameEnd', {
-    winner,        // 'crewmates' | 'imposters'
+    winner,
     secretWord: room.secretWord,
     imposterName: imposter?.name,
     imposterId: imposter?.id,
@@ -621,6 +973,8 @@ function pictoEndGame(room, winner) {
     victoryMedia: selectedMedia,
     matchId
   });
+
+  io.to(room.code).emit('game:sound', { sound: winner === 'imposters' ? 'imposterWin' : 'crewmatesWin' });
 }
 
 // ─────────────────────────────────────────
@@ -659,6 +1013,7 @@ io.on('connection', (socket) => {
     socket.join(code);
     socket.emit('room:joined', { code, room: getPublicRoom(room), player });
     socket.to(code).emit('room:playerJoined', { player: { id: player.id, name: player.name, score: 0 }, room: getPublicRoom(room) });
+    io.to(room.code).emit('game:sound', { sound: 'playerJoin' });
     console.log(`[ROOM] ${name} joined ${code}`);
   });
 
@@ -673,6 +1028,7 @@ io.on('connection', (socket) => {
       console.log(`[ROOM] ${room.code} deleted (empty)`);
     } else {
       io.to(room.code).emit('room:playerLeft', { playerId: socket.id, room: getPublicRoom(room) });
+      io.to(room.code).emit('game:sound', { sound: 'playerLeave' });
     }
   });
 
@@ -689,6 +1045,8 @@ io.on('connection', (socket) => {
   socket.on('room:updateSettings', (settings) => {
     const room = getRoomForSocket(socket.id);
     if (!room || room.hostId !== socket.id || room.state !== 'lobby') return;
+    // wordCount is always 3 for Sketchio; ignore client override
+    if (settings.wordCount !== undefined) delete settings.wordCount;
     Object.assign(room.settings, settings);
     io.to(room.code).emit('room:settingsUpdated', { settings: room.settings });
   });
@@ -712,12 +1070,12 @@ io.on('connection', (socket) => {
         if (normalizedGuess === normalizedWord) {
           room.guessedCorrectly.add(socket.id);
           player.hasGuessed = true;
-          // Score based on time remaining — get from last timer tick
           const guessScore = Math.max(100, 300 - (room.guessedCorrectly.size - 1) * 50);
           player.score += guessScore;
           room.scores[socket.id] = (room.scores[socket.id] || 0) + guessScore;
 
           io.to(socket.id).emit('sketchio:correctGuess', { word: room.currentWord, points: guessScore });
+          io.to(socket.id).emit('game:sound', { sound: 'correctGuess' });
           io.to(room.code).emit('chat:message', {
             senderId: 'system',
             senderName: 'Game',
@@ -737,7 +1095,7 @@ io.on('connection', (socket) => {
           }
           return;
         } else {
-          // Check if guess is very close (1 letter off)
+          // Close guess detection
           const isCloseWord = (a, b) => {
             if (Math.abs(a.length - b.length) > 1) return false;
             let diff = 0;
@@ -796,8 +1154,17 @@ io.on('connection', (socket) => {
   socket.on('draw:event', (data) => {
     const room = getRoomForSocket(socket.id);
     if (!room || room.state !== 'playing') return;
-    const drawer = room.players[room.currentDrawerIndex];
-    if (!drawer || drawer.id !== socket.id) return;
+
+    // Validate: only the current authorized drawer may send draw events
+    let authorizedDrawerId = null;
+    if (room.game === 'picto') {
+      // In Picto, the authorized drawer is the one at pictoDrawOrder[pictoDrawOrderIndex]
+      authorizedDrawerId = room.pictoDrawOrder?.[room.pictoDrawOrderIndex];
+    } else {
+      const drawer = room.players[room.currentDrawerIndex];
+      authorizedDrawerId = drawer?.id;
+    }
+    if (!authorizedDrawerId || socket.id !== authorizedDrawerId) return;
 
     const event = {
       type: data.type,
@@ -816,8 +1183,15 @@ io.on('connection', (socket) => {
   socket.on('draw:clear', () => {
     const room = getRoomForSocket(socket.id);
     if (!room) return;
-    const drawer = room.players[room.currentDrawerIndex];
-    if (!drawer || drawer.id !== socket.id) return;
+    // Only authorized drawer can clear
+    let authorizedDrawerId = null;
+    if (room.game === 'picto') {
+      authorizedDrawerId = room.pictoDrawOrder?.[room.pictoDrawOrderIndex];
+    } else {
+      const drawer = room.players[room.currentDrawerIndex];
+      authorizedDrawerId = drawer?.id;
+    }
+    if (!authorizedDrawerId || socket.id !== authorizedDrawerId) return;
     room.drawHistory = [];
     io.to(room.code).emit('draw:clear');
   });
@@ -825,10 +1199,16 @@ io.on('connection', (socket) => {
   socket.on('draw:undo', () => {
     const room = getRoomForSocket(socket.id);
     if (!room) return;
-    const drawer = room.players[room.currentDrawerIndex];
-    if (!drawer || drawer.id !== socket.id) return;
+    let authorizedDrawerId = null;
+    if (room.game === 'picto') {
+      authorizedDrawerId = room.pictoDrawOrder?.[room.pictoDrawOrderIndex];
+    } else {
+      const drawer = room.players[room.currentDrawerIndex];
+      authorizedDrawerId = drawer?.id;
+    }
+    if (!authorizedDrawerId || socket.id !== authorizedDrawerId) return;
 
-    // Find the last stroke start or fill event
+    // Find the last stroke start or fill event and remove from there
     let lastStrokeStart = -1;
     for (let i = room.drawHistory.length - 1; i >= 0; i--) {
       if (room.drawHistory[i].type === 'start' || room.drawHistory[i].type === 'fill') {
@@ -885,41 +1265,67 @@ io.on('connection', (socket) => {
     pictoStartGame(room);
   });
 
+  // "Next Person" — only current active drawer can trigger
+  socket.on('picto:nextPerson', () => {
+    const room = getRoomForSocket(socket.id);
+    if (!room || room.game !== 'picto' || room.state !== 'playing') return;
+    const success = pictoSkipToNextDrawer(room, socket.id);
+    if (!success) {
+      socket.emit('error', { message: 'You are not the current drawer.' });
+    }
+  });
+
   socket.on('picto:vote', ({ targetId }) => {
     const room = getRoomForSocket(socket.id);
     if (!room || room.game !== 'picto' || room.state !== 'voting') return;
     const voter = room.players.find(p => p.id === socket.id);
     if (!voter || voter.hasVoted) return;
-    if (targetId === socket.id) return; // Can't vote self
+    if (targetId === socket.id) return;
     if (room.eliminated.includes(targetId)) return;
 
     voter.hasVoted = true;
     room.votes[socket.id] = targetId;
 
-    // Check if all voted
     const eligible = room.players.filter(p => !room.eliminated.includes(p.id) && p.connected);
     const allVoted = eligible.every(p => p.hasVoted);
     if (allVoted) pictoTallyVotes(room);
   });
 
+  /**
+   * Imposter guess — exactly ONE attempt allowed.
+   * Server is authoritative: validates against secret word, locks out after first submission.
+   */
   socket.on('picto:imposterGuess', ({ guess }) => {
     const room = getRoomForSocket(socket.id);
     if (!room || room.state !== 'imposterGuess') return;
     if (socket.id !== room.imposterId) return;
+
+    // Lock out: only one guess allowed
+    if (room.imposterGuessSubmitted) {
+      socket.emit('picto:imposterGuessLocked', { message: 'You have already submitted your guess.' });
+      return;
+    }
+    room.imposterGuessSubmitted = true;
+
     guess = String(guess || '').trim().toLowerCase();
     const secret = room.secretWord.toLowerCase().trim();
 
+    // Lock the input on client side immediately
+    io.to(socket.id).emit('picto:imposterGuessFeedback', { submitted: true });
+
+    if (room.imposterGuessTimer) { clearTimeout(room.imposterGuessTimer); room.imposterGuessTimer = null; }
+
     if (guess === secret) {
-      if (room.imposterGuessTimer) { clearTimeout(room.imposterGuessTimer); room.imposterGuessTimer = null; }
       io.to(room.code).emit('picto:imposterCorrectGuess', { message: 'The Imposter guessed the secret word correctly!' });
+      io.to(room.code).emit('game:sound', { sound: 'imposterWin' });
       pictoEndGame(room, 'imposters');
     } else {
-      room.imposterGuessAttempts++;
-      io.to(socket.id).emit('picto:imposterWrongGuess', { attemptsLeft: Math.max(0, 3 - room.imposterGuessAttempts) });
-      if (room.imposterGuessAttempts >= 3) {
-        if (room.imposterGuessTimer) { clearTimeout(room.imposterGuessTimer); room.imposterGuessTimer = null; }
-        pictoEndGame(room, 'crewmates');
-      }
+      io.to(room.code).emit('picto:imposterWrongGuess', {
+        imposterName: room.players.find(p => p.id === socket.id)?.name,
+        guess
+      });
+      io.to(room.code).emit('game:sound', { sound: 'crewmatesWin' });
+      pictoEndGame(room, 'crewmates');
     }
   });
 
@@ -984,6 +1390,32 @@ io.on('connection', (socket) => {
         playerId: socket.id,
         room: getPublicRoom(room)
       });
+      io.to(room.code).emit('game:sound', { sound: 'playerLeave' });
+
+      // Handle disconnect during Picto drawing turn
+      if (room.game === 'picto' && room.state === 'playing') {
+        const activePictoDrawer = room.pictoDrawOrder?.[room.pictoDrawOrderIndex];
+        if (activePictoDrawer === socket.id) {
+          // Current drawer disconnected — auto-advance
+          clearRoomTimers(room);
+          setTimeout(() => pictoNextDrawer(room), 1500);
+        }
+      }
+
+      // Handle disconnect during Sketchio drawing turn
+      if (room.game === 'sketchio' && room.state === 'playing') {
+        const drawer = room.players[room.currentDrawerIndex];
+        if (drawer?.id === socket.id) {
+          clearRoomTimers(room);
+          setTimeout(() => sketchioEndTurn(room, false), 1500);
+        }
+      }
+
+      // Handle disconnect during imposter guess phase
+      if (room.game === 'picto' && room.state === 'imposterGuess' && socket.id === room.imposterId) {
+        if (room.imposterGuessTimer) { clearTimeout(room.imposterGuessTimer); room.imposterGuessTimer = null; }
+        setTimeout(() => pictoEndGame(room, 'crewmates'), 1500);
+      }
     }
 
     socket.to(room.code).emit('voice:peerLeft', { peerId: socket.id });
@@ -1003,6 +1435,10 @@ io.on('connection', (socket) => {
       socket.join(code);
       socket.emit('room:reconnected', { room: getPublicRoom(room), player: existing });
       io.to(code).emit('room:playerReconnected', { playerId: socket.id, playerName: name, room: getPublicRoom(room) });
+      // Send current draw state
+      if (room.drawHistory && room.drawHistory.length > 0) {
+        socket.emit('draw:sync', { history: room.drawHistory });
+      }
     } else {
       socket.emit('error', { message: 'Could not reconnect. Name not found in room.' });
     }

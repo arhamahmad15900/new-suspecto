@@ -7,6 +7,10 @@ const GameManager = (() => {
   let currentRoom = null;
   let currentPlayer = null;
 
+  // Track Picto sequential draw state
+  let pictoCurrentDrawerId = null;
+  let pictoIsMyTurn = false;
+
   function init(socketInstance) {
     socket = socketInstance;
     bindGameEvents();
@@ -53,6 +57,11 @@ const GameManager = (() => {
       appendChat(message, senderName, type || 'chat');
     });
 
+    // ── SOUND EVENTS ────────────────────────────────────────────────
+    socket.on('game:sound', ({ sound }) => {
+      SoundManager.play(sound);
+    });
+
     // ── SKETCHIO EVENTS ──────────────────────────────────────────────
     socket.on('sketchio:gameStarted', ({ settings }) => {
       appendChat('Game is starting!', 'Game', 'system');
@@ -62,6 +71,7 @@ const GameManager = (() => {
       DrawingCanvas.reset();
       DrawingCanvas.setDrawer(false);
       renderPlayerList();
+      hide('picto-draw-progress');
     });
 
     socket.on('sketchio:wordChoices', ({ words }) => {
@@ -69,7 +79,8 @@ const GameManager = (() => {
       show('sketchio-word-choice');
       const container = document.getElementById('word-choice-buttons');
       container.innerHTML = '';
-      words.forEach(word => {
+      // Always show exactly 3 choices
+      words.slice(0, 3).forEach(word => {
         const btn = document.createElement('button');
         btn.className = 'word-choice-btn';
         btn.textContent = word;
@@ -77,6 +88,7 @@ const GameManager = (() => {
           socket.emit('sketchio:wordChosen', { word });
           hideAllCenterPanels();
           show('center-canvas');
+          show('drawing-toolbar');
         };
         container.appendChild(btn);
       });
@@ -88,6 +100,7 @@ const GameManager = (() => {
       hideAllCenterPanels();
       show('center-canvas');
       hide('canvas-overlay');
+      hide('picto-draw-progress');
 
       const drawerInfo = document.getElementById('canvas-drawer-name');
       if (drawerInfo) drawerInfo.textContent = drawerName;
@@ -98,7 +111,7 @@ const GameManager = (() => {
       }
     });
 
-    socket.on('sketchio:roundStart', ({ drawerId, drawerName, wordBlanks, wordLength, drawTime }) => {
+    socket.on('sketchio:roundStart', ({ drawerId, drawerName, wordBlanks, wordLength, drawTime, startTime }) => {
       hide('canvas-overlay');
       const drawerInfo = document.getElementById('canvas-drawer-name');
       if (drawerInfo) drawerInfo.textContent = drawerName;
@@ -111,6 +124,7 @@ const GameManager = (() => {
       const blanksEl = document.getElementById('canvas-word-blanks');
       if (blanksEl) blanksEl.textContent = word.toUpperCase();
       appendChat(`Your word is: ${word}`, 'Game', 'system');
+      show('drawing-toolbar');
     });
 
     socket.on('sketchio:timer', ({ timeLeft }) => {
@@ -164,6 +178,8 @@ const GameManager = (() => {
       document.getElementById('bar-round-total').textContent = rounds;
       document.getElementById('bar-round-val').textContent = round;
       show('bar-round');
+      pictoCurrentDrawerId = null;
+      pictoIsMyTurn = false;
     });
 
     socket.on('picto:roleAssigned', ({ role, secretWord, hint }) => {
@@ -178,30 +194,78 @@ const GameManager = (() => {
       setTimeout(() => banner.remove(), 6000);
     });
 
-    socket.on('picto:drawingTurn', ({ drawerId, drawerName, drawTime, round }) => {
+    // Drawing phase start — all players will draw sequentially
+    socket.on('picto:drawPhaseStart', ({ totalDrawers, round }) => {
+      hideAllCenterPanels();
+      show('center-canvas');
+      DrawingCanvas.reset();
+      hide('canvas-overlay');
+      appendChat(`Drawing phase! ${totalDrawers} players will each draw in turn.`, 'Game', 'system');
+      const blanksEl = document.getElementById('canvas-word-blanks');
+      if (blanksEl) blanksEl.textContent = 'Drawing phase begins...';
+      hide('picto-draw-progress');
+    });
+
+    socket.on('picto:drawingTurn', ({ drawerId, drawerName, drawTime, round, drawerNumber, totalDrawers, startTime, isLastDrawer }) => {
       hideAllCenterPanels();
       show('center-canvas');
       hide('canvas-overlay');
-      DrawingCanvas.reset();
-      DrawingCanvas.setDrawer(socket.id === drawerId);
+
+      pictoCurrentDrawerId = drawerId;
+      pictoIsMyTurn = (socket.id === drawerId);
+
+      // In Picto: do NOT reset/clear canvas — drawing persists
+      DrawingCanvas.setDrawer(pictoIsMyTurn);
+
       document.getElementById('bar-round-val').textContent = round;
+
       const drawerInfo = document.getElementById('canvas-drawer-name');
-      if (drawerInfo) drawerInfo.textContent = drawerName;
+      if (drawerInfo) drawerInfo.textContent = pictoIsMyTurn ? '🎨 You (Drawing!)' : drawerName;
+
       const blanksEl = document.getElementById('canvas-word-blanks');
-      if (blanksEl) blanksEl.textContent = socket.id === drawerId ? '(You are drawing — use the secret word as inspiration!)' : '...';
-      appendChat(`${drawerName} is drawing!`, 'Game', 'system');
+      if (blanksEl) {
+        blanksEl.textContent = pictoIsMyTurn
+          ? '🎨 Draw your part — add to the canvas!'
+          : `${drawerName} is adding to the drawing...`;
+      }
+
+      // Show progress indicator
+      const progressEl = document.getElementById('picto-draw-progress');
+      if (progressEl) {
+        progressEl.classList.remove('hidden');
+        document.getElementById('picto-drawer-num').textContent = drawerNumber || '?';
+        document.getElementById('picto-drawer-total').textContent = totalDrawers || '?';
+      }
+
+      // Show/hide Next Person button (only for active drawer in toolbar)
+      const nextBtnWrap = document.getElementById('picto-next-btn-wrap');
+      if (nextBtnWrap) {
+        nextBtnWrap.style.display = pictoIsMyTurn ? '' : 'none';
+      }
+
+      if (pictoIsMyTurn) {
+        appendChat(`🎨 It's YOUR turn to draw! You have ${drawTime}s.`, 'Game', 'system');
+        show('drawing-toolbar');
+      } else {
+        appendChat(`${drawerName} is now drawing (${drawerNumber}/${totalDrawers}).`, 'Game', 'system');
+        hide('drawing-toolbar');
+      }
     });
 
     socket.on('picto:timer', ({ timeLeft, phase }) => {
       updateTimer(timeLeft);
       if (phase === 'voting') {
-        document.getElementById('bar-timer-val').textContent = `Vote: ${timeLeft}`;
+        const el = document.getElementById('bar-timer-val');
+        if (el) el.textContent = `Vote: ${timeLeft}`;
       }
     });
 
     socket.on('picto:votingPhase', ({ eligiblePlayers, voteTime }) => {
       hideAllCenterPanels();
       show('picto-voting-panel');
+      pictoIsMyTurn = false;
+      pictoCurrentDrawerId = null;
+
       const list = document.getElementById('voting-players-list');
       list.innerHTML = '';
       eligiblePlayers.forEach(p => {
@@ -231,7 +295,6 @@ const GameManager = (() => {
         showOverlay(`<h3>🗳 ${eliminatedName} was eliminated!</h3><p>They were a <strong>${roleLabel}</strong></p>`);
         show('center-canvas');
         appendChat(`${eliminatedName} was eliminated! (${roleLabel})`, 'Game', 'system');
-        // Update player list
         if (currentRoom) {
           const p = currentRoom.players.find(pl => pl.id === eliminated);
           if (p) { currentRoom.eliminated = currentRoom.eliminated || []; currentRoom.eliminated.push(eliminated); }
@@ -243,25 +306,59 @@ const GameManager = (() => {
     socket.on('picto:imposterGuessing', ({ imposterId, imposterName, timeLimit }) => {
       if (socket.id !== imposterId) {
         showOverlay(`<h3>🕵️ ${escapeHtml(imposterName)} was the Imposter!</h3><p>They have ${timeLimit}s to guess the secret word and steal the win!</p>`);
-        appendChat(`🕵️ ${imposterName} has 20s to guess the secret word!`, 'Game', 'system');
+        appendChat(`🕵️ ${imposterName} has ${timeLimit}s to guess the secret word!`, 'Game', 'system');
       }
     });
 
+    // Imposter receives the guess UI — exactly ONE input, ONE submit
     socket.on('picto:imposterGuessChance', ({ message }) => {
       hideAllCenterPanels();
       show('picto-imposter-guess-panel');
-      document.getElementById('imposter-attempts').textContent = '3 attempts remaining';
+
+      // Reset the form to fresh state — only one guess allowed
+      const form = document.getElementById('imposter-guess-form');
+      const input = document.getElementById('imposter-guess-input');
+      const btn = document.getElementById('btn-imposter-guess');
+      const status = document.getElementById('imposter-guess-status');
+
+      if (form) form.style.display = '';
+      if (input) { input.value = ''; input.disabled = false; input.focus(); }
+      if (btn) btn.disabled = false;
+      if (status) { status.textContent = ''; status.style.color = ''; }
+
+      // Reset app.js guard flag
+      if (typeof window._resetImposterGuessFlag === 'function') window._resetImposterGuessFlag();
+
       appendChat(message, 'Game', 'system');
+    });
+
+    // Server locked out any further guesses
+    socket.on('picto:imposterGuessFeedback', ({ submitted }) => {
+      if (!submitted) return;
+      const input = document.getElementById('imposter-guess-input');
+      const btn = document.getElementById('btn-imposter-guess');
+      const status = document.getElementById('imposter-guess-status');
+
+      if (input) input.disabled = true;
+      if (btn) btn.disabled = true;
+      if (status) status.textContent = '⏳ Guess submitted — waiting for result...';
+    });
+
+    socket.on('picto:imposterGuessLocked', ({ message }) => {
+      showToast(message, 'error');
     });
 
     socket.on('picto:imposterCorrectGuess', ({ message }) => {
       appendChat(message, 'Game', 'system');
       showToast(message, 'info');
+      const status = document.getElementById('imposter-guess-status');
+      if (status) { status.textContent = '✅ Correct! Imposter wins!'; status.style.color = '#4AC7A8'; }
     });
 
-    socket.on('picto:imposterWrongGuess', ({ attemptsLeft }) => {
-      document.getElementById('imposter-attempts').textContent = `${attemptsLeft} attempt${attemptsLeft !== 1 ? 's' : ''} remaining`;
-      if (attemptsLeft === 0) showToast('No more attempts!', 'error');
+    socket.on('picto:imposterWrongGuess', ({ imposterName, guess }) => {
+      appendChat(`❌ ${imposterName}'s guess "${guess}" was wrong. Crewmates win!`, 'Game', 'system');
+      const status = document.getElementById('imposter-guess-status');
+      if (status) { status.textContent = '❌ Wrong guess — crewmates win!'; status.style.color = '#e74c3c'; }
     });
 
     socket.on('picto:newRound', ({ round }) => {
@@ -284,6 +381,10 @@ const GameManager = (() => {
      'picto-imposter-guess-panel','sketchio-word-choice','game-end-panel',
      'canvas-overlay'].forEach(hide);
     DrawingCanvas.setDrawer(false);
+    pictoIsMyTurn = false;
+    // Hide Next Person button
+    const nextBtnWrap = document.getElementById('picto-next-btn-wrap');
+    if (nextBtnWrap) nextBtnWrap.style.display = 'none';
   }
 
   function showOverlay(html) {
@@ -333,9 +434,10 @@ const GameManager = (() => {
       const isMe = p.id === socket.id;
       const elim = eliminated.includes(p.id);
       const guessed = p.hasGuessed;
-      li.className = (elim ? 'player-eliminated' : '') + (guessed ? ' player-guessed' : '');
+      const isCurrentDrawer = p.id === pictoCurrentDrawerId;
+      li.className = (elim ? 'player-eliminated' : '') + (guessed ? ' player-guessed' : '') + (isCurrentDrawer ? ' player-drawing' : '');
       li.innerHTML = `
-        <span class="player-icon">${p.isHost ? '👑' : (elim ? '💀' : (guessed ? '✅' : '👤'))}</span>
+        <span class="player-icon">${p.isHost ? '👑' : (elim ? '💀' : (guessed ? '✅' : (isCurrentDrawer ? '🎨' : '👤')))}</span>
         <span class="player-name">${escapeHtml(p.name)}${isMe ? ' (You)' : ''}</span>
         <span class="player-score">${p.score || 0}</span>
       `;
@@ -372,7 +474,6 @@ const GameManager = (() => {
     `;
 
     document.getElementById('btn-play-again').onclick = () => {
-      // Return to lobby
       socket.emit('room:leave');
       navigateTo(game === 'picto' ? 'picto-lobby' : 'sketchio-lobby');
     };
@@ -415,7 +516,6 @@ const GameManager = (() => {
       navigateTo('home');
     };
 
-    // Trigger victory media celebration after a short delay
     if (victoryMedia && matchId) {
       setTimeout(() => {
         PictoVictoryMedia.show(winner, victoryMedia, matchId);
@@ -433,28 +533,149 @@ const GameManager = (() => {
 })();
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  SOUND MANAGER
+//  Handles all game sound effects with mute support.
+//  Prevents overlapping/duplicate sounds. Does not use external libs.
+// ─────────────────────────────────────────────────────────────────────────────
+const SoundManager = (() => {
+  let enabled = true;
+  const STORAGE_KEY = 'suspecto-sound';
+
+  // Sound definitions — use Web Audio API to generate simple tones
+  // so we don't need additional audio files, keeping things lightweight.
+  let audioCtx = null;
+
+  function getCtx() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch(e) {
+        console.warn('[Sound] Web Audio not supported.');
+      }
+    }
+    return audioCtx;
+  }
+
+  function resumeCtx() {
+    const ctx = getCtx();
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  // Tone definitions: [frequency, duration, type, gain]
+  const SOUNDS = {
+    correctGuess:      () => playChord([523, 659, 784], 0.3, 'sine', 0.4),
+    newTurn:           () => playTone(440, 0.15, 'sine', 0.3),
+    newRound:          () => playSequence([[330, 0.1],[440, 0.1],[550, 0.15]], 'sine', 0.35),
+    countdownWarning:  () => playTone(660, 0.12, 'square', 0.2),
+    timerEnd:          () => playTone(220, 0.3, 'sawtooth', 0.25),
+    votingPhase:       () => playSequence([[400, 0.1],[350, 0.15]], 'sine', 0.3),
+    gameEnd:           () => playSequence([[523, 0.1],[659, 0.1],[784, 0.2],[1047, 0.3]], 'sine', 0.4),
+    imposterWin:       () => playSequence([[300, 0.15],[250, 0.15],[200, 0.25]], 'sawtooth', 0.35),
+    crewmatesWin:      () => playSequence([[523, 0.1],[659, 0.1],[784, 0.2],[1047, 0.3]], 'sine', 0.4),
+    playerJoin:        () => playTone(880, 0.1, 'sine', 0.2),
+    playerLeave:       () => playTone(330, 0.15, 'sine', 0.2),
+  };
+
+  function playTone(freq, duration, type, gain) {
+    const ctx = resumeCtx();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gainNode.gain.setValueAtTime(gain || 0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  }
+
+  function playChord(freqs, duration, type, gain) {
+    freqs.forEach(f => playTone(f, duration, type, gain / freqs.length));
+  }
+
+  function playSequence(notes, type, gain) {
+    const ctx = resumeCtx();
+    if (!ctx) return;
+    let t = ctx.currentTime;
+    notes.forEach(([freq, dur]) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gainNode.gain.setValueAtTime(gain || 0.3, t);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t);
+      osc.stop(t + dur);
+      t += dur;
+    });
+  }
+
+  function play(soundName) {
+    if (!enabled) return;
+    const fn = SOUNDS[soundName];
+    if (fn) {
+      try { fn(); } catch(e) { console.warn('[Sound] Error playing', soundName, e); }
+    }
+  }
+
+  function setEnabled(val) {
+    enabled = val;
+    try { localStorage.setItem(STORAGE_KEY, val ? '1' : '0'); } catch(e) {}
+    // Update button icon
+    const btn = document.getElementById('btn-sound-toggle');
+    if (btn) btn.textContent = val ? '🔊' : '🔇';
+  }
+
+  function toggle() {
+    setEnabled(!enabled);
+    showToast(enabled ? 'Sound ON 🔊' : 'Sound OFF 🔇', 'info', 1500);
+  }
+
+  function init() {
+    // Restore preference
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved === '0') setEnabled(false);
+    } catch(e) {}
+
+    const btn = document.getElementById('btn-sound-toggle');
+    if (btn) {
+      btn.onclick = () => {
+        // First click also resumes AudioContext (browser policy)
+        resumeCtx();
+        toggle();
+      };
+      btn.textContent = enabled ? '🔊' : '🔇';
+    }
+
+    // Resume AudioContext on first user gesture
+    document.addEventListener('click', () => resumeCtx(), { once: true });
+    document.addEventListener('touchstart', () => resumeCtx(), { once: true });
+  }
+
+  return { play, init, setEnabled, toggle };
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  PICTO VICTORY MEDIA MODULE
-//  Reusable, self-contained meme-media celebration overlay.
-//  All logic is isolated here; nothing else in game.js is duplicated.
 // ─────────────────────────────────────────────────────────────────────────────
 const PictoVictoryMedia = (() => {
-  // Display duration: how long the overlay stays visible (ms)
-  // Progress bar animates over this duration. Overlay dismisses at end.
   const DISPLAY_MS = 8000;
-  // Extra grace window: if audio ends before DISPLAY_MS, dismiss STAY_EXTRA ms later
   const STAY_EXTRA = 1200;
 
-  // Guard against duplicate playback for the same matchId
   const _seenMatchIds = new Set();
 
-  let _audio = null;         // Active HTMLAudioElement
-  let _dismissTimer = null;  // setTimeout handle for auto-dismiss
-  let _playBtn = null;       // Manual play button reference
+  let _audio = null;
+  let _dismissTimer = null;
+  let _playBtn = null;
 
-  // ── DOM references (lazy-cached) ───────────────────────────
   function _el(id) { return document.getElementById(id); }
 
-  // ── Dismiss / cleanup ──────────────────────────────────────
   function dismiss() {
     if (_dismissTimer) { clearTimeout(_dismissTimer); _dismissTimer = null; }
     if (_audio) {
@@ -470,7 +691,6 @@ const PictoVictoryMedia = (() => {
     const panel   = overlay && overlay.querySelector('.victory-media-panel');
     if (!overlay || overlay.classList.contains('hidden')) return;
 
-    // Play exit animation then hide
     if (panel) {
       panel.classList.add('exiting');
       setTimeout(() => {
@@ -482,22 +702,17 @@ const PictoVictoryMedia = (() => {
     }
   }
 
-  // ── Show ───────────────────────────────────────────────────
   function show(winner, media, matchId) {
-    // Deduplication guard — never play the same match event twice
     if (_seenMatchIds.has(matchId)) return;
     _seenMatchIds.add(matchId);
 
-    // Discard stale matchIds if the set grows too large
     if (_seenMatchIds.size > 20) {
       const it = _seenMatchIds.values();
       _seenMatchIds.delete(it.next().value);
     }
 
-    // Dismiss any active overlay first
     dismiss();
 
-    // ── Populate DOM ──────────────────────────────────────────
     const overlay  = _el('victory-media-overlay');
     const imgEl    = _el('victory-media-img');
     const labelEl  = _el('victory-media-label');
@@ -512,22 +727,18 @@ const PictoVictoryMedia = (() => {
     imgEl.alt    = media.label + ' meme';
     playBtnEl.classList.add('hidden');
 
-    // Reset progress bar
     if (barEl) {
       barEl.style.transition = 'none';
       barEl.style.width = '100%';
     }
 
-    // Show the overlay
     overlay.classList.remove('hidden');
 
-    // Clicking the backdrop dismisses immediately
     const backdrop = overlay.querySelector('.victory-media-backdrop');
     if (backdrop) {
       backdrop.onclick = () => dismiss();
     }
 
-    // Start the progress bar animation immediately
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (barEl) {
@@ -537,7 +748,6 @@ const PictoVictoryMedia = (() => {
       });
     });
 
-    // ── Audio setup ───────────────────────────────────────────
     const audioEl = new Audio();
     audioEl.preload = 'auto';
     audioEl.loop    = false;
@@ -546,35 +756,26 @@ const PictoVictoryMedia = (() => {
     _audio  = audioEl;
     _playBtn = playBtnEl;
 
-    let audioDone = false;
-
     function scheduleDismiss(fromNow) {
       if (_dismissTimer) clearTimeout(_dismissTimer);
       _dismissTimer = setTimeout(() => dismiss(), fromNow);
     }
 
     audioEl.addEventListener('ended', () => {
-      audioDone = true;
-      // Keep image visible for STAY_EXTRA ms after audio ends,
-      // but cap at the remaining DISPLAY_MS window
       scheduleDismiss(STAY_EXTRA);
     }, { once: true });
 
     audioEl.addEventListener('error', () => {
-      // Audio failed — still show image for DISPLAY_MS
       console.warn('[VictoryMedia] Audio error, showing image only.');
     });
 
     audioEl.src = media.audio;
 
-    // Attempt autoplay
     const playPromise = audioEl.play();
     if (playPromise !== undefined) {
       playPromise.then(() => {
-        // Autoplay succeeded — hide the manual play button
         playBtnEl.classList.add('hidden');
       }).catch(() => {
-        // Autoplay blocked — show the manual play button
         playBtnEl.classList.remove('hidden');
         playBtnEl.onclick = () => {
           audioEl.play().catch(() => {});
@@ -583,7 +784,6 @@ const PictoVictoryMedia = (() => {
       });
     }
 
-    // Auto-dismiss after DISPLAY_MS regardless of audio state
     scheduleDismiss(DISPLAY_MS);
   }
 

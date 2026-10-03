@@ -56,10 +56,8 @@
 
           <!-- ══ LETTER 1 — S — Red ══ -->
           <g class="l-1">
-            <!-- small hand-drawn wobble via slight rotation baked in -->
             <text x="18" y="100" class="logo-letter lc-S"
                   transform="rotate(-2.5, 52, 100)">S</text>
-            <!-- Specular shine arc -->
             <path d="M30,44 C38,38 54,37 64,42"
                   stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.7"/>
           </g>
@@ -123,7 +121,6 @@
 
           <!-- ══ ACCENT — Magnifying Glass (detective brand mark) ══ -->
           <g class="logo-glass-group">
-            <!-- Rotated & positioned at top-right of the word -->
             <!-- Handle body -->
             <line x1="555" y1="105" x2="580" y2="128"
                   stroke="#5C3317" stroke-width="13" stroke-linecap="round"/>
@@ -276,7 +273,7 @@
             <h4>Games &amp; Modes</h4>
           </div>
           <ul class="footer-links">
-            <li><strong>Picto</strong> &mdash; Turn-based drawing, secret words &amp; voting</li>
+            <li><strong>Picto</strong> &mdash; Sequential drawing, secret words &amp; voting</li>
             <li><strong>Sketchio</strong> &mdash; Fast drawing, letter hints &amp; leaderboard</li>
             <li><strong>Voice Chat</strong> &mdash; Integrated WebRTC audio for groups</li>
             <li><strong>Custom Words</strong> &mdash; Support for custom word lists</li>
@@ -288,7 +285,7 @@
             <span class="footer-icon">💡</span>
             <h4>Quick Rules</h4>
           </div>
-          <p><strong>Picto:</strong> Crewmates share a secret word. The Imposter does not! Blend in, draw subtle hints, and vote to eliminate the suspect.</p>
+          <p><strong>Picto:</strong> Crewmates share a secret word. Each player draws in turn — the Imposter tries to blend in! Vote to eliminate the suspect.</p>
           <p style="margin-top:8px;"><strong>Sketchio:</strong> Guess the drawn word as quickly as you can to score maximum points each round.</p>
         </div>
       </div>
@@ -358,6 +355,7 @@
       <label for="create-name">Your Name</label>
       <input type="text" id="create-name" placeholder="Enter your name" maxlength="20" autocomplete="off">
 
+      <!-- ── PICTO SETTINGS ── -->
       <div id="create-settings-picto" class="settings-group hidden">
         <label for="create-maxplayers-picto">Max Players</label>
         <select id="create-maxplayers-picto">
@@ -381,13 +379,12 @@
           <option value="4">4 Rounds</option>
           <option value="5">5 Rounds</option>
         </select>
-        <label for="create-drawtime-picto">Draw Time (seconds)</label>
-        <select id="create-drawtime-picto">
-          <option value="40">40s</option>
-          <option value="60">60s</option>
-          <option value="80" selected>80s</option>
-          <option value="100">100s</option>
-          <option value="120">120s</option>
+        <label for="create-playerdrawtime">Draw Time Per Player (seconds)</label>
+        <select id="create-playerdrawtime">
+          <option value="15">15s per player</option>
+          <option value="20" selected>20s per player</option>
+          <option value="30">30s per player</option>
+          <option value="45">45s per player</option>
         </select>
         <label for="create-votetime">Vote Time (seconds)</label>
         <select id="create-votetime">
@@ -404,6 +401,7 @@
         </select>
       </div>
 
+      <!-- ── SKETCHIO SETTINGS ── -->
       <div id="create-settings-sketchio" class="settings-group hidden">
         <label for="create-maxplayers-sketchio">Max Players</label>
         <select id="create-maxplayers-sketchio">
@@ -430,22 +428,29 @@
           <option value="100">100s</option>
           <option value="120">120s</option>
         </select>
+
+        <!-- Word Category — replaces old "Words to Choose From" -->
         <label for="create-category-sketchio">Word Category</label>
         <select id="create-category-sketchio">
-          <option value="animals" selected>Animals</option>
-          <option value="food">Food</option>
-          <option value="objects">Objects</option>
-          <option value="nature">Nature</option>
-          <option value="sports">Sports</option>
-          <option value="misc">Misc</option>
+          <option value="random" selected>🎲 Random (All Categories)</option>
+          <option value="animals">🐾 Animals</option>
+          <option value="food">🍕 Food</option>
+          <option value="objects">🔧 Objects</option>
+          <option value="nature">🌿 Nature</option>
+          <option value="sports">⚽ Sports</option>
+          <option value="misc">🎭 Misc</option>
+          <option value="twoword">✌️ 2 Word Type</option>
         </select>
-        <label for="create-wordcount">Words to Choose From</label>
-        <select id="create-wordcount">
-          <option value="2">2 Words</option>
-          <option value="3" selected>3 Words</option>
-          <option value="4">4 Words</option>
-          <option value="5">5 Words</option>
+
+        <!-- Word Difficulty -->
+        <label for="create-difficulty-sketchio">Word Difficulty</label>
+        <select id="create-difficulty-sketchio">
+          <option value="any" selected>Any Difficulty</option>
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
         </select>
+
         <label for="create-customwords">Custom Words (comma-separated, optional)</label>
         <textarea id="create-customwords" placeholder="apple, car, house, astronaut (leave blank to use defaults)" maxlength="5000"></textarea>
       </div>
@@ -498,6 +503,8 @@
     <div id="game-bar-status">
       <div id="bar-timer" class="hidden">⏱ <span id="bar-timer-val">--</span>s</div>
       <div id="bar-round" class="hidden">Round <span id="bar-round-val">-</span>/<span id="bar-round-total">-</span></div>
+      <!-- Sound toggle -->
+      <button id="btn-sound-toggle" class="btn btn-sm btn-secondary" title="Toggle Sound">🔊</button>
     </div>
   </div>
 
@@ -540,6 +547,10 @@
           <div id="canvas-word-display">
             <span id="canvas-word-blanks">_ _ _ _ _</span>
           </div>
+          <!-- Picto: draw progress indicator -->
+          <div id="picto-draw-progress" class="hidden">
+            Drawer <span id="picto-drawer-num">1</span> / <span id="picto-drawer-total">?</span>
+          </div>
         </div>
         <canvas id="drawing-canvas" width="800" height="600"></canvas>
         <div id="canvas-overlay" class="hidden">
@@ -552,30 +563,36 @@
         <div class="toolbar-section">
           <label class="toolbar-label">Tool</label>
           <div class="toolbar-tools">
-            <button class="tool-btn active" data-tool="pen" title="Pen">✏️</button>
-            <button class="tool-btn" data-tool="eraser" title="Eraser">⬜</button>
-            <button class="tool-btn" data-tool="fill" title="Fill">🪣</button>
+            <button class="tool-btn active" data-tool="pen" title="Pen (P)">✏️</button>
+            <button class="tool-btn" data-tool="eraser" title="Eraser (E)">⬜</button>
+            <button class="tool-btn" data-tool="fill" title="Fill (F)">🪣</button>
           </div>
         </div>
         <div class="toolbar-section">
           <label class="toolbar-label">Size</label>
           <div class="size-buttons">
-            <button class="size-btn" data-size="2">•</button>
-            <button class="size-btn active" data-size="6">●</button>
-            <button class="size-btn" data-size="14">⬤</button>
-            <button class="size-btn" data-size="30">⬛</button>
+            <button class="size-btn" data-size="2" title="Tiny">•</button>
+            <button class="size-btn active" data-size="6" title="Small">●</button>
+            <button class="size-btn" data-size="14" title="Medium">⬤</button>
+            <button class="size-btn" data-size="30" title="Large">⬛</button>
           </div>
         </div>
         <div class="toolbar-section">
           <label class="toolbar-label">Colors</label>
           <div class="color-palette" id="color-palette"></div>
+          <!-- Custom color picker -->
+          <input type="color" id="custom-color-picker" title="Custom Color" value="#000000">
         </div>
         <div class="toolbar-section">
           <label class="toolbar-label">Actions</label>
           <div class="toolbar-actions">
-            <button class="btn btn-sm btn-secondary" id="btn-undo">↩ Undo</button>
-            <button class="btn btn-sm btn-danger" id="btn-clear">🗑 Clear</button>
+            <button class="btn btn-sm btn-secondary" id="btn-undo" title="Undo (Ctrl+Z)">↩ Undo</button>
+            <button class="btn btn-sm btn-danger" id="btn-clear" title="Clear Canvas">🗑 Clear</button>
           </div>
+        </div>
+        <!-- Picto: Next Person button (only visible to active drawer) -->
+        <div class="toolbar-section" id="picto-next-btn-wrap" style="display:none;">
+          <button class="btn btn-green btn-full" id="btn-picto-next-person">⏭ Next Person</button>
         </div>
       </div>
 
@@ -586,20 +603,21 @@
         <div id="voting-players-list"></div>
       </div>
 
-      <!-- Picto Imposter Guess Panel -->
+      <!-- Picto Imposter Guess Panel — ONE guess only -->
       <div id="picto-imposter-guess-panel" class="hidden">
         <h3>🕵️ You are the Imposter!</h3>
-        <p>You were eliminated. Guess the secret word to steal the victory!</p>
-        <div class="imposter-guess-form">
-          <input type="text" id="imposter-guess-input" placeholder="Type your guess..." maxlength="50" autocomplete="off">
-          <button class="btn btn-green" id="btn-imposter-guess">Guess!</button>
+        <p>You were eliminated. You have <strong>one chance</strong> to guess the secret word and steal the victory!</p>
+        <div class="imposter-guess-form" id="imposter-guess-form">
+          <input type="text" id="imposter-guess-input" placeholder="Type your guess here..." maxlength="50" autocomplete="off">
+          <button class="btn btn-green" id="btn-imposter-guess">Submit Guess</button>
         </div>
-        <div id="imposter-attempts">3 attempts remaining</div>
+        <div id="imposter-guess-status"></div>
       </div>
 
       <!-- Sketchio Word Choice Panel -->
       <div id="sketchio-word-choice" class="hidden">
         <h3>✏️ Choose a word to draw!</h3>
+        <p class="word-choice-hint">Pick one — other players cannot see your choice.</p>
         <div id="word-choice-buttons"></div>
       </div>
 
